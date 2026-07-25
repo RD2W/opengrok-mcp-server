@@ -1,0 +1,14 @@
+# OpenGrok MCP Server — local development
+
+services:
+  opengrok-mcp:
+    build: .
+    image: opengrok-mcp:latest
+    container_name: opengrok-mcp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./config/.env
+    volumes:
+      - ./config:/config:ro

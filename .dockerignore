@@ -1,0 +1,55 @@
+# Build artifacts
+target/
+
+# VCS
+.git/
+.gitattributes
+.gitignore
+
+# CI/CD
+.github/
+
+# Docs (except README needed by Docker Hub)
+docs/
+*.md
+!README.md
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+CODE_OF_CONDUCT.md
+LICENSE
+
+# Config (mounted at runtime, not needed in image)
+config/
+
+# IDEs & editors
+.vscode/
+.idea/
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+*~
+.*.un~
+.DS_Store
+Thumbs.db
+
+# AI agents & tools
+.zcode/
+.claude/
+.cursor/
+.continue/
+.aider*
+.windsurf/
+.codex/
+.copilot/
+.roo/
+.cline/
+
+# Superpowers SDK artifacts
+.superpowers/
+
+# OS junk
+*.log
+*.tmp

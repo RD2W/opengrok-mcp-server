@@ -1,0 +1,20 @@
+# OpenGrok MCP Server — Docker Hub pre-built image
+# Uses the pre-built multi-arch image from Docker Hub instead of building locally.
+# No Rust toolchain required — just docker pull + docker compose up.
+#
+# Usage:
+#   docker compose -f docker-compose.hub.yml up -d
+#
+# Image: https://hub.docker.com/r/rd2w/opengrok-mcp/tags
+
+services:
+  opengrok-mcp:
+    image: rd2w/opengrok-mcp:latest
+    container_name: opengrok-mcp
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./config/.env
+    volumes:
+      - ./config:/config:ro

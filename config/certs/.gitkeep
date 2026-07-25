@@ -1,0 +1,7 @@
+# Mount point for russian_trusted_root_ca_pem.crt and other CA certificates.
+# Place your custom CA .pem/.crt files here and mount this directory
+# in docker-compose: ./certs:/certs:ro
+#
+# env: OPENGROK_CA_CERT=/certs/russian_trusted_root_ca_pem.crt
+#
+# This file ensures the directory is tracked by git.

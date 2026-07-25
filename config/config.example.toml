@@ -1,0 +1,127 @@
+# OpenGrok MCP Server Configuration
+#
+# Copy this file to config.toml or config/config.toml and adjust.
+# Values can be overridden via environment variables (see comments).
+
+# ---------------------------------------------------------------------------
+# OpenGrok connection settings
+# ---------------------------------------------------------------------------
+[opengrok]
+# Base URL of the OpenGrok instance (required).
+# Environment: OPENGROK_URL
+base_url = "https://opengrok.example.com"
+
+# HTTP request timeout in seconds.
+timeout_secs = 30
+
+# Path to custom CA certificate PEM file for TLS.
+# Environment: OPENGROK_CA_CERT or SSL_CERT_FILE
+# ca_cert = "/path/to/ca-cert.pem"
+
+# Path to directory of CA certificate files for TLS.
+# Environment: SSL_CERT_DIR
+# ca_cert_dir = "/etc/ssl/certs"
+
+# Whether to verify TLS certificates.
+# Environment: OPENGROK_VERIFY_SSL=false or OPENGROK_VERIFY_SSL=0 to disable
+verify_ssl = true
+
+# ---------------------------------------------------------------------------
+# OpenGrok authentication
+# ---------------------------------------------------------------------------
+[opengrok.auth]
+# Authentication mode: "token", "basic", or "none".
+#
+# "token"  — Bearer token, read from the env var named in `token_env`.
+# "basic"  — HTTP Basic Auth, credentials read from `username_env`/`password_env`.
+# "none"   — No authentication header sent.
+#
+# CREDENTIALS ARE NEVER STORED IN THIS FILE.
+# Use environment variables or a config/.env file instead.
+mode = "none"
+
+# Environment variable name holding the bearer token.
+# The value is read from that env var at startup, never from this file.
+# Default: OPENGROK_TOKEN
+# token_env = "OPENGROK_TOKEN"
+
+# Environment variable name holding the Basic auth username.
+# The value is read from that env var at startup, never from this file.
+# username_env = "OPENGROK_USERNAME"
+
+# Environment variable name holding the Basic auth password.
+# The value is read from that env var at startup, never from this file.
+# password_env = "OPENGROK_PASSWORD"
+
+# ---------------------------------------------------------------------------
+# Service behaviour
+# ---------------------------------------------------------------------------
+[service]
+# Strip <b> HTML tags from search result lines (recommended for LLMs).
+strip_html = true
+
+# Maximum matching lines per file. Caps large result sets for AOSP-scale repos.
+max_hits_per_file = 10
+
+# Default maximum result documents when not specified by the client.
+default_max_results = 25
+
+# ---------------------------------------------------------------------------
+# Cache settings (in-memory, per-process)
+# ---------------------------------------------------------------------------
+[cache]
+# Enable in-memory caching of OpenGrok API responses.
+enabled = false
+
+# Time-to-live for cache entries in seconds.
+ttl_secs = 300
+
+# Maximum number of cache entries.
+max_entries = 1000
+
+# ---------------------------------------------------------------------------
+# Rate limiting (protects the OpenGrok server from overload)
+# ---------------------------------------------------------------------------
+[rate_limit]
+# Enable rate limiting for outgoing OpenGrok API requests.
+enabled = false
+
+# Maximum requests per second to the OpenGrok API.
+requests_per_second = 5
+
+# Maximum burst size (tokens refilled at requests_per_second rate).
+burst = 10
+
+# ---------------------------------------------------------------------------
+# Transport settings (MCP protocol layer)
+# ---------------------------------------------------------------------------
+[transport]
+# Transport mode: "stdio", "http", or "both".
+mode = "both"
+
+# Bind address for the HTTP transport.
+bind_addr = "0.0.0.0:8080"
+
+# URL path for the MCP Streamable HTTP endpoint.
+http_path = "/mcp"
+
+# Health check endpoint path.
+health_path = "/healthz"
+
+# Readiness check endpoint path.
+ready_path = "/readyz"
+
+# Prometheus-compatible metrics endpoint path.
+metrics_path = "/metrics"
+
+# Allowed hostnames for Streamable HTTP Host header validation.
+# Leave empty to accept any host.
+# allowed_hosts = ["opengrok.example.com", "localhost:8080"]
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+[log]
+# Log level: "trace", "debug", "info", "warn", "error".
+# Environment: RUST_LOG
+level = "info"
