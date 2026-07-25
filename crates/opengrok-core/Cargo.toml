@@ -1,0 +1,32 @@
+[package]
+name = "opengrok-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+
+description = "Core library for OpenGrok MCP server: domain models, OpenGrok API client, cache, rate-limit"
+
+[lib]
+name = "opengrok_core"
+
+[dependencies]
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+async-trait.workspace = true
+url.workspace = true
+dashmap.workspace = true
+governor.workspace = true
+rustls.workspace = true
+rustls-native-certs.workspace = true
+rustls-pemfile.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "test-util"] }
+tempfile.workspace = true
+wiremock.workspace = true

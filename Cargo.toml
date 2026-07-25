@@ -1,0 +1,45 @@
+[workspace]
+resolver = "2"
+members = ["crates/opengrok-core", "crates/opengrok-mcp"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.97"
+license = "GPL-3.0-or-later"
+authors = ["RD2W <mkrutovercev@yandex.ru>"]
+
+[workspace.dependencies]
+# Core dependencies
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "stream", "rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+async-trait = "0.1"
+url = "2"
+dashmap = "6"
+governor = "0.10"
+rustls = "0.23"
+rustls-native-certs = "0.8"
+rustls-pemfile = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time", "signal"] }
+chrono = "0.4"
+
+# Binary dependencies
+rmcp = { version = "2.2", default-features = false, features = ["server", "macros", "transport-io", "transport-streamable-http-server", "schemars", "base64"] }
+schemars = "1"
+axum = "0.8"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+toml = "1"
+anyhow = "1"
+
+# Workspace-internal
+opengrok-core = { path = "crates/opengrok-core" }
+
+# Dev/test dependencies
+tempfile = "3"
+wiremock = "0.6"
+
+[profile.release]
+strip = true

@@ -1,0 +1,25 @@
+# Rust build output
+/target/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Local config and secrets (do not commit credentials)
+config/config.toml
+config/.env
+config/certs/*.crt
+config/certs/*.pem
+
+# Release artifacts
+builds/
+
+# Agent guidance (local only)
+AGENTS.md
