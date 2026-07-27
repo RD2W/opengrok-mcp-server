@@ -250,6 +250,107 @@ impl<R: OpengrokRepository> OpengrokService<R> {
         Ok(self.formatter.format_annotation(&entries))
     }
 
+    /// Lists all configured project groups.
+    pub async fn list_groups(&self) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let groups = self.repo.list_groups().await?;
+        Ok(self.formatter.format_simple_list("group", &groups))
+    }
+
+    /// Lists projects within a group (including subgroups).
+    pub async fn get_group_projects(&self, group: &str) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let projects = self.repo.get_group_projects(group).await?;
+        Ok(self.formatter.format_simple_list("project", &projects))
+    }
+
+    /// Lists files in a project from the index.
+    pub async fn list_project_files(&self, project: &str) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let files = self.repo.list_project_files(project).await?;
+        Ok(self.formatter.format_simple_list("file", &files))
+    }
+
+    /// Lists repository paths for a project.
+    pub async fn list_project_repos(&self, project: &str) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let repos = self.repo.list_project_repos(project).await?;
+        Ok(self.formatter.format_simple_list("repository", &repos))
+    }
+
+    /// Gets a per-project property value.
+    pub async fn get_project_property(
+        &self,
+        project: &str,
+        name: &str,
+    ) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let value = self.repo.get_project_property(project, name).await?;
+        Ok(format!("{name} = {value}\n"))
+    }
+
+    /// Gets a repository property value.
+    pub async fn get_repo_property(
+        &self,
+        field: &str,
+        repository: &str,
+    ) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let value = self.repo.get_repo_property(field, repository).await?;
+        Ok(format!("{field} = {value}\n"))
+    }
+
+    /// Gets suggester configuration.
+    pub async fn get_suggest_config(&self) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let config = self.repo.get_suggest_config().await?;
+        Ok(self.formatter.format_suggest_config(&config))
+    }
+
+    /// Gets OpenGrok version string.
+    pub async fn get_opengrok_version(&self) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let version = self.repo.get_opengrok_version().await?;
+        Ok(format!("OpenGrok version: {version}\n"))
+    }
+
+    /// Gets the time of the last index run.
+    pub async fn get_index_time(&self) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let time = self.repo.get_index_time().await?;
+        Ok(format!("Last index time: {time}\n"))
+    }
+
+    /// Checks whether OpenGrok webapp is alive.
+    pub async fn health_check(&self) -> Result<String, DomainError> {
+        if let Some(ref rl) = self.rate_limiter {
+            rl.acquire().await?;
+        }
+        let alive = self.repo.health_check().await?;
+        Ok(format!(
+            "OpenGrok is {}\n",
+            if alive { "alive" } else { "unreachable" }
+        ))
+    }
+
     // -- Helpers ------------------------------------------------------------
 
     fn search_cache_key(&self, req: &SearchRequest) -> String {
@@ -476,5 +577,134 @@ mod tests {
         };
         let result = svc.search(req).await;
         assert!(result.is_ok());
+    }
+
+    // -- New endpoints: groups -----------------------------------------------
+
+    #[tokio::test]
+    async fn list_groups_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.set_groups(vec!["g1".into(), "g2".into()]);
+
+        let result = svc.list_groups().await.unwrap();
+        assert!(result.contains("Found 2 group(s)"));
+        assert!(result.contains("g1"));
+        assert!(result.contains("g2"));
+    }
+
+    #[tokio::test]
+    async fn get_group_projects_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.push_group_projects(Ok(vec!["p1".into(), "p2".into()]));
+
+        let result = svc.get_group_projects("mygroup").await.unwrap();
+        assert!(result.contains("Found 2 project(s)"));
+        assert!(result.contains("p1"));
+    }
+
+    // -- New endpoints: projects extra ---------------------------------------
+
+    #[tokio::test]
+    async fn list_project_files_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.push_project_files(Ok(vec!["src/a.rs".into(), "src/b.rs".into()]));
+
+        let result = svc.list_project_files("proj").await.unwrap();
+        assert!(result.contains("Found 2 file(s)"));
+        assert!(result.contains("src/a.rs"));
+    }
+
+    #[tokio::test]
+    async fn list_project_repos_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.push_project_repos(Ok(vec!["/repo.git".into()]));
+
+        let result = svc.list_project_repos("proj").await.unwrap();
+        assert!(result.contains("Found 1 repository"));
+        assert!(result.contains("/repo.git"));
+    }
+
+    #[tokio::test]
+    async fn get_project_property_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.push_project_property(Ok("BAR".into()));
+
+        let result = svc.get_project_property("proj", "FOO").await.unwrap();
+        assert!(result.contains("FOO = BAR"));
+    }
+
+    // -- New endpoints: repositories -----------------------------------------
+
+    #[tokio::test]
+    async fn get_repo_property_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.push_repo_property(Ok("git".into()));
+
+        let result = svc.get_repo_property("type", "myrepo").await.unwrap();
+        assert!(result.contains("type = git"));
+    }
+
+    // -- New endpoints: system / suggest config ------------------------------
+
+    #[tokio::test]
+    async fn get_suggest_config_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.set_suggest_config(SuggestConfig {
+            enabled: true,
+            max_results: 10,
+            min_chars: 0,
+            allowed_projects: None,
+            max_projects: 100,
+            allowed_fields: vec!["full".into()],
+            allow_complex_queries: true,
+            allow_most_popular: true,
+            show_scores: false,
+            show_projects: true,
+            show_time: false,
+            rebuild_cron_config: "".into(),
+            build_termination_time: 0,
+            rebuild_thread_pool_size_in_ncpu_percent: 0,
+            search_thread_pool_size_in_ncpu_percent: 0,
+        });
+
+        let result = svc.get_suggest_config().await.unwrap();
+        assert!(result.contains("Suggester configuration"));
+        assert!(result.contains("enabled: yes"));
+    }
+
+    #[tokio::test]
+    async fn get_opengrok_version_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.set_version("1.14.11".into());
+
+        let result = svc.get_opengrok_version().await.unwrap();
+        assert!(result.contains("OpenGrok version: 1.14.11"));
+    }
+
+    #[tokio::test]
+    async fn get_index_time_returns_formatted() {
+        let (svc, repo) = test_service();
+        repo.set_index_time("2026-07-25T02:16:48Z".into());
+
+        let result = svc.get_index_time().await.unwrap();
+        assert!(result.contains("Last index time: 2026-07-25T02:16:48Z"));
+    }
+
+    #[tokio::test]
+    async fn health_check_alive() {
+        let (svc, repo) = test_service();
+        repo.set_ping_alive(true);
+
+        let result = svc.health_check().await.unwrap();
+        assert!(result.contains("alive"));
+    }
+
+    #[tokio::test]
+    async fn health_check_unreachable() {
+        let (svc, repo) = test_service();
+        repo.set_ping_alive(false);
+
+        let result = svc.health_check().await.unwrap();
+        assert!(result.contains("unreachable"));
     }
 }

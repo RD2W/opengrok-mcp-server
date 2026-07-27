@@ -3,7 +3,7 @@
 
 //! MCP server implementation.
 //!
-//! Defines [`OpengrokServer<R>`] — the MCP server struct with all 15
+//! Defines [`OpengrokServer<R>`] — the MCP server struct with all 25
 //! tools, registered via rmcp's `#[tool_router]` / `#[tool_handler]`
 //! macros. Generic over the repository implementation so that tests
 //! can inject a mock.
@@ -71,7 +71,7 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
 }
 
 // ---------------------------------------------------------------------------
-// Tool definitions (15 tools)
+// Tool definitions (25 tools)
 // ---------------------------------------------------------------------------
 
 #[tool_router]
@@ -338,6 +338,127 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
             Err(e) => Self::error_result(e.to_string()),
         }
     }
+
+    // 16. list_groups
+    #[tool(description = "List all configured project groups in OpenGrok.")]
+    async fn list_groups(&self, Parameters(_params): Parameters<NoParams>) -> CallToolResult {
+        match self.service.list_groups().await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 17. get_group_projects
+    #[tool(description = "List all projects (including sub-groups) within a given group.")]
+    async fn get_group_projects(
+        &self,
+        Parameters(params): Parameters<GetGroupProjectsParams>,
+    ) -> CallToolResult {
+        match self.service.get_group_projects(&params.group).await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 18. list_project_files
+    #[tool(description = "List all files in a project from the index.")]
+    async fn list_project_files(
+        &self,
+        Parameters(params): Parameters<ListProjectFilesParams>,
+    ) -> CallToolResult {
+        match self.service.list_project_files(&params.project).await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 19. list_project_repos
+    #[tool(description = "List repository paths for a project.")]
+    async fn list_project_repos(
+        &self,
+        Parameters(params): Parameters<ListProjectReposParams>,
+    ) -> CallToolResult {
+        match self.service.list_project_repos(&params.project).await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 20. get_project_property
+    #[tool(description = "Get a per-project property value from OpenGrok.")]
+    async fn get_project_property(
+        &self,
+        Parameters(params): Parameters<GetProjectPropertyParams>,
+    ) -> CallToolResult {
+        match self
+            .service
+            .get_project_property(&params.project, &params.name)
+            .await
+        {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 21. get_repo_property
+    #[tool(
+        description = "Get a repository property (type, branch, working, remote, parent, currentVersion, historyEnabled)."
+    )]
+    async fn get_repo_property(
+        &self,
+        Parameters(params): Parameters<GetRepoPropertyParams>,
+    ) -> CallToolResult {
+        match self
+            .service
+            .get_repo_property(&params.field, &params.repository)
+            .await
+        {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 22. get_suggest_config
+    #[tool(description = "Get the suggester configuration (enabled fields, limits, behavior).")]
+    async fn get_suggest_config(
+        &self,
+        Parameters(_params): Parameters<NoParams>,
+    ) -> CallToolResult {
+        match self.service.get_suggest_config().await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 23. get_opengrok_version
+    #[tool(description = "Get the OpenGrok web application version string.")]
+    async fn get_opengrok_version(
+        &self,
+        Parameters(_params): Parameters<NoParams>,
+    ) -> CallToolResult {
+        match self.service.get_opengrok_version().await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 24. get_index_time
+    #[tool(description = "Get the time of the last index run (ISO 8601 format).")]
+    async fn get_index_time(&self, Parameters(_params): Parameters<NoParams>) -> CallToolResult {
+        match self.service.get_index_time().await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
+
+    // 25. health_check
+    #[tool(description = "Check whether the OpenGrok web application is alive and responding.")]
+    async fn health_check(&self, Parameters(_params): Parameters<NoParams>) -> CallToolResult {
+        match self.service.health_check().await {
+            Ok(text) => Self::text_result(text),
+            Err(e) => Self::error_result(e.to_string()),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -353,7 +474,12 @@ impl<R: OpengrokRepository + Send + Sync + 'static> ServerHandler for OpengrokSe
              Use search_code for full-text queries, search_definition \
              to find where symbols are defined, search_references for \
              usage lookups, search_file_path for filename searches, \
-             and get_file_content to read file contents."
+             get_file_content to read file contents, get_history for \
+             revision history, get_annotation for blame, \
+             list_groups/list_indexed_projects/list_all_projects for \
+             project navigation, get_suggest_config for suggester settings,\
+             get_index_time for index freshness, get_opengrok_version \
+             for API compatibility."
                 .into(),
         );
         info

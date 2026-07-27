@@ -176,18 +176,19 @@ healthcheck:
 
 ## Справочник инструментов MCP
 
-Сервер предоставляет **15 инструментов**, покрывающих всё OpenGrok REST API.
+Сервер предоставляет **25 инструментов**, покрывающих всё OpenGrok REST API.
 
 ### Инструменты поиска
 
 | Инструмент | Описание | Основные параметры |
 |---|---|---|
-| `search` | Полнотекстовый поиск с подсказками пагинации | `query`, `project`, `max_results`, `page` |
-| `search_full` | Поиск с полными полями результата (строки, авторы, метки времени) | `query`, `project`, `max_results`, `page` |
-| `search_raw` | Сырой поиск — возвращает неформатированные строки | `query`, `project`, `max_results`, `page` |
-| `search_define` | Поиск символа/определения по кодовой базе | `symbol`, `project` |
-| `search_suggest` | Подсказки автодополнения запроса | `prefix`, `project` |
-| `search_hist` | История поиска для заданного запроса | `query`, `project` |
+| `search_code` | Полнотекстовый поиск (Lucene-синтаксис) | `query`, `project?`, `max_results` |
+| `search_definition` | Поиск определения символа | `symbol`, `project?` |
+| `search_references` | Поиск всех использований символа | `symbol`, `project?` |
+| `search_file_path` | Поиск файлов по пути (glob) | `path`, `project?` |
+| `search_history` | Поиск по истории изменений | `hist`, `project?` |
+| `advanced_search` | Расширенный поиск (все поля, пагинация, сортировка) | `full?`, `def?`, `symbol?`, `path?`, `hist?`, `file_type?`, `project?`, `max_results?`, `start?`, `max_hits_per_file?`, `sort?` |
+| `suggest` | Автодополнение поискового запроса | `project`, `field`, `caret`, `full?`, `defs?`, `refs?`, `path?`, `file_type?` |
 
 ### Инструменты для файлов
 
@@ -202,11 +203,34 @@ healthcheck:
 
 | Инструмент | Описание | Основные параметры |
 |---|---|---|
-| `dir_list` | Список содержимого директории | `path`, `project`, `max_results` |
-| `dir_list_full` | Список директории с метаданными файлов | `path`, `project`, `max_results` |
-| `project_list` | Список всех индексированных проектов OpenGrok | — |
-| `project_info` | Метаданные проекта (описание, статус индексации) | `project` |
-| `system_info` | Информация о сервере OpenGrok (версия, статус индекса) | — |
+| `list_directory` | Список содержимого директории | `path` |
+| `list_indexed_projects` | Список индексированных проектов | — |
+| `list_all_projects` | Список всех проектов (включая неиндексированные) | — |
+| `list_groups` | Список групп проектов | — |
+| `get_group_projects` | Проекты внутри группы (включая подгруппы) | `group` |
+| `list_project_files` | Список файлов проекта из индекса | `project` |
+| `list_project_repos` | Пути репозиториев проекта | `project` |
+| `get_project_property` | Per-project свойство | `project`, `name` |
+| `get_repo_property` | Свойство репозитория (тип, ветка, remote) | `field`, `repository` |
+
+### Инструменты для файлов
+
+| Инструмент | Описание | Основные параметры |
+|---|---|---|
+| `get_file_content` | Получение содержимого файла | `project`, `path` |
+| `get_file_definitions` | Определения (функции, классы) в файле | `path` |
+| `get_file_genre` | Тип файла (PLAIN, XREFABLE, IMAGE) | `path` |
+| `get_history` | История изменений файла | `path`, `start?`, `max?` |
+| `get_annotation` | Аннотация (blame) для файла | `path` |
+
+### Системные инструменты
+
+| Инструмент | Описание | Основные параметры |
+|---|---|---|
+| `get_suggest_config` | Конфигурация suggester'а | — |
+| `get_index_time` | Время последней индексации (ISO 8601) | — |
+| `get_opengrok_version` | Версия OpenGrok | — |
+| `health_check` | Проверка живости OpenGrok | — |
 
 ### Формат результатов
 

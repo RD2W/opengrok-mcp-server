@@ -31,6 +31,12 @@ const API_PROJECTS_INDEXED: &str = "projects/indexed";
 const API_PROJECTS: &str = "projects";
 const API_HISTORY: &str = "history";
 const API_ANNOTATION: &str = "annotation";
+const API_GROUPS: &str = "groups";
+const API_SUGGEST_CONFIG: &str = "suggest/config";
+const API_SYSTEM_VERSION: &str = "system/version";
+const API_SYSTEM_INDEXTIME: &str = "system/indextime";
+const API_SYSTEM_PING: &str = "system/ping";
+const API_REPOSITORIES_PROPERTY: &str = "repositories/property";
 
 const HEADER_ACCEPT: &str = "Accept";
 const HEADER_OCTET_STREAM: &str = "application/octet-stream";
@@ -357,6 +363,67 @@ impl OpengrokRepository for OpengrokClient {
         let query: [(&str, &str); 1] = [("path", path)];
         let dtos: Vec<AnnotationEntryDto> = self.get_json(API_ANNOTATION, &query).await?;
         Ok(dtos.into_iter().map(Into::into).collect())
+    }
+
+    async fn list_groups(&self) -> Result<Vec<String>, DomainError> {
+        self.get_json(API_GROUPS, &[]).await
+    }
+
+    async fn get_group_projects(&self, group: &str) -> Result<Vec<String>, DomainError> {
+        let path = format!("groups/{group}/allprojects");
+        self.get_json(&path, &[]).await
+    }
+
+    async fn list_project_files(&self, project: &str) -> Result<Vec<String>, DomainError> {
+        let path = format!("projects/{project}/files");
+        self.get_json(&path, &[]).await
+    }
+
+    async fn list_project_repos(&self, project: &str) -> Result<Vec<String>, DomainError> {
+        let path = format!("projects/{project}/repositories");
+        self.get_json(&path, &[]).await
+    }
+
+    async fn get_project_property(&self, project: &str, name: &str) -> Result<String, DomainError> {
+        let path = format!("projects/{project}/property/{name}");
+        let response = self.get(&path, &[]).await?;
+        let text = response.text().await?;
+        Ok(text)
+    }
+
+    async fn get_repo_property(
+        &self,
+        field: &str,
+        repository: &str,
+    ) -> Result<String, DomainError> {
+        let query: [(&str, &str); 1] = [("repository", repository)];
+        let path = format!("{API_REPOSITORIES_PROPERTY}/{field}");
+        let response = self.get(&path, &query).await?;
+        let text = response.text().await?;
+        Ok(text)
+    }
+
+    async fn get_suggest_config(&self) -> Result<SuggestConfig, DomainError> {
+        self.get_json(API_SUGGEST_CONFIG, &[]).await
+    }
+
+    async fn get_opengrok_version(&self) -> Result<String, DomainError> {
+        let response = self.get(API_SYSTEM_VERSION, &[]).await?;
+        let text = response.text().await?;
+        Ok(text.trim().trim_matches('"').to_string())
+    }
+
+    async fn get_index_time(&self) -> Result<String, DomainError> {
+        let response = self.get(API_SYSTEM_INDEXTIME, &[]).await?;
+        let text = response.text().await?;
+        Ok(text.trim().trim_matches('"').to_string())
+    }
+
+    async fn health_check(&self) -> Result<bool, DomainError> {
+        match self.get(API_SYSTEM_PING, &[]).await {
+            Ok(_) => Ok(true),
+            Err(_) => Ok(false),
+        }
     }
 }
 
@@ -898,6 +965,271 @@ mod tests {
         let suggestions = client.suggest(&req).await.unwrap();
         assert_eq!(suggestions.len(), 1);
         assert_eq!(suggestions[0].phrase, "func");
+    }
+
+    // -- New endpoints: groups ----------------------------------------------
+
+    #[tokio::test]
+    async fn list_groups_returns_array() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/groups"));
+
+            let body = r#"["group-a","group-b"]"#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let groups = client.list_groups().await.unwrap();
+        assert_eq!(groups, vec!["group-a", "group-b"]);
+    }
+
+    #[tokio::test]
+    async fn get_group_projects_returns_array() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/groups/mygroup/allprojects"));
+
+            let body = r#"["proj1","proj2"]"#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let projects = client.get_group_projects("mygroup").await.unwrap();
+        assert_eq!(projects, vec!["proj1", "proj2"]);
+    }
+
+    // -- New endpoints: projects extra --------------------------------------
+
+    #[tokio::test]
+    async fn list_project_files_returns_array() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/projects/myproj/files"));
+
+            let body = r#"["src/main.rs","src/lib.rs"]"#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let files = client.list_project_files("myproj").await.unwrap();
+        assert_eq!(files, vec!["src/main.rs", "src/lib.rs"]);
+    }
+
+    #[tokio::test]
+    async fn list_project_repos_returns_array() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/projects/myproj/repositories"));
+
+            let body = r#"["/src/repo.git"]"#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let repos = client.list_project_repos("myproj").await.unwrap();
+        assert_eq!(repos, vec!["/src/repo.git"]);
+    }
+
+    #[tokio::test]
+    async fn get_project_property_returns_text() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/projects/myproj/property/foo"));
+
+            let body = "bar";
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let value = client.get_project_property("myproj", "foo").await.unwrap();
+        assert_eq!(value, "bar");
+    }
+
+    // -- New endpoints: repositories ----------------------------------------
+
+    #[tokio::test]
+    async fn get_repo_property_queries_repository_param() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/repositories/property/type"));
+            assert!(first.contains("repository=myrepo"));
+
+            let body = "git";
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let value = client.get_repo_property("type", "myrepo").await.unwrap();
+        assert_eq!(value, "git");
+    }
+
+    // -- New endpoints: suggest config --------------------------------------
+
+    #[tokio::test]
+    async fn get_suggest_config_returns_struct() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/suggest/config"));
+
+            let body = r#"{"enabled":true,"maxResults":10,"minChars":0,"allowedProjects":null,"maxProjects":100,"allowedFields":["full","defs"],"allowComplexQueries":true,"allowMostPopular":true,"showScores":false,"showProjects":true,"showTime":false,"rebuildCronConfig":"0 0 * * *","buildTerminationTime":1800,"rebuildThreadPoolSizeInNcpuPercent":80,"searchThreadPoolSizeInNcpuPercent":90}"#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let config = client.get_suggest_config().await.unwrap();
+        assert!(config.enabled);
+        assert_eq!(config.max_results, 10);
+        assert_eq!(config.allowed_fields, vec!["full", "defs"]);
+    }
+
+    // -- New endpoints: system ----------------------------------------------
+
+    #[tokio::test]
+    async fn get_opengrok_version_trims_quotes() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (_first, _headers) = read_request(&mut stream).await;
+
+            let body = "1.14.11";
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let version = client.get_opengrok_version().await.unwrap();
+        assert_eq!(version, "1.14.11");
+    }
+
+    #[tokio::test]
+    async fn get_index_time_trims_quotes() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (_first, _headers) = read_request(&mut stream).await;
+
+            // OpenGrok returns ISO 8601 in quotes
+            let body = r#""2026-07-25T02:16:48+00:00""#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let time = client.get_index_time().await.unwrap();
+        assert_eq!(time, "2026-07-25T02:16:48+00:00");
+    }
+
+    #[tokio::test]
+    async fn health_check_returns_true() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (first, _headers) = read_request(&mut stream).await;
+            assert!(first.contains("GET /api/v1/system/ping"));
+
+            let resp = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let alive = client.health_check().await.unwrap();
+        assert!(alive);
+    }
+
+    #[tokio::test]
+    async fn health_check_returns_false_on_error() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let resp = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let alive = client.health_check().await.unwrap();
+        assert!(!alive);
     }
 
     // ------------------------------------------------------------------

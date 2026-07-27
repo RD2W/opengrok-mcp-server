@@ -17,8 +17,9 @@ code search. Designed for **AOSP 15** scale codebases.
 
 ### Features
 
-- **15 MCP tools** — full OpenGrok REST API coverage: search (6 variants), file content,
-  definitions, history, annotation, suggestions, directory listing, projects
+- **25 MCP tools** — full OpenGrok REST API coverage: search (6 variants), file content,
+  definitions, history, annotation, suggestions, directory listing, projects, groups,
+  repository properties, system info
 - **Dual transport** — stdio (`docker exec`) and Streamable HTTP (axum + rmcp)
 - **Flexible auth** — Bearer token or HTTP Basic Auth to OpenGrok
 - **Custom CA** — TLS with corporate/self-signed certificates via
@@ -138,7 +139,7 @@ Full documentation is available in `docs/en/`:
 
 - [Overview](docs/en/overview.md) — capabilities and project status
 - [Installation](docs/en/installation.md) — requirements, build, Docker
-- [Usage](docs/en/usage.md) — config reference, transport modes, all 15 MCP tools
+- [Usage](docs/en/usage.md) — config reference, transport modes, all 25 MCP tools
 - [Architecture](docs/en/architecture.md) — workspace layout, crate responsibilities, data flow
 - [Development](docs/en/development.md) — contributing, testing, CI, conventions
 
@@ -171,8 +172,9 @@ MCP (Model Context Protocol) сервер для поиска по коду [Ope
 
 ### Возможности
 
-- **15 инструментов MCP** — полное покрытие OpenGrok REST API: поиск (6 вариантов), содержимое
-  файлов, определения, история, аннотация, подсказки, список директорий, проекты
+- **25 инструментов MCP** — полное покрытие OpenGrok REST API: поиск (6 вариантов), содержимое
+  файлов, определения, история, аннотация, подсказки, список директорий, проекты, группы,
+  свойства репозиториев, системная информация
 - **Двойной транспорт** — stdio (`docker exec`) и Streamable HTTP (axum + rmcp)
 - **Гибкая аутентификация** — Bearer-токен или HTTP Basic Auth для OpenGrok
 - **Пользовательские сертификаты** — TLS с корпоративными/самоподписанными сертификатами
@@ -292,7 +294,7 @@ allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp", "opengrok-mcp:8004"]
 
 - [Обзор](docs/ru/overview.md) — возможности и статус проекта
 - [Установка](docs/ru/installation.md) — требования, сборка, Docker
-- [Использование](docs/ru/usage.md) — справочник по конфигурации, режимы транспорта, все 15 инструментов MCP
+- [Использование](docs/ru/usage.md) — справочник по конфигурации, режимы транспорта, все 25 инструментов MCP
 - [Архитектура](docs/ru/architecture.md) — структура workspace, зоны ответственности крейтов, поток данных
 - [Разработка](docs/ru/development.md) — участие, тестирование, CI, соглашения
 

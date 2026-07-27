@@ -174,37 +174,52 @@ healthcheck:
 
 ## MCP tools reference
 
-The server exposes **15 tools** covering the full OpenGrok REST API.
+The server exposes **25 tools** covering the full OpenGrok REST API.
 
 ### Search tools
 
 | Tool | Description | Key parameters |
 |---|---|---|
-| `search` | Full-text search with pagination hints | `query`, `project`, `max_results`, `page` |
-| `search_full` | Search with full result fields (lines, authors, timestamps) | `query`, `project`, `max_results`, `page` |
-| `search_raw` | Raw search — returns unformatted lines | `query`, `project`, `max_results`, `page` |
-| `search_define` | Symbol/definition lookup across the codebase | `symbol`, `project` |
-| `search_suggest` | Query auto-completion suggestions | `prefix`, `project` |
-| `search_hist` | Search history for a given query | `query`, `project` |
+| `search_code` | Full-text search (Lucene syntax) | `query`, `project?`, `max_results` |
+| `search_definition` | Find symbol definitions | `symbol`, `project?` |
+| `search_references` | Find all references to a symbol | `symbol`, `project?` |
+| `search_file_path` | Search for files by path glob | `path`, `project?` |
+| `search_history` | Search file history/changelog | `hist`, `project?` |
+| `advanced_search` | Advanced search (all fields, pagination, sorting) | `full?`, `def?`, `symbol?`, `path?`, `hist?`, `file_type?`, `project?`, `max_results?`, `start?`, `max_hits_per_file?`, `sort?` |
+| `suggest` | Query autocomplete suggestions | `project`, `field`, `caret`, `full?`, `defs?`, `refs?`, `path?`, `file_type?` |
 
 ### File tools
 
 | Tool | Description | Key parameters |
 |---|---|---|
-| `file_content` | Retrieve a file's content with line numbers | `path`, `project`, `start_line`, `end_line` |
-| `file_xref` | Cross-reference (symbol usage) for a file | `path`, `project` |
-| `file_history` | Git history for a file | `path`, `project` |
-| `file_annotate` | Blame/annotation for a file | `path`, `project` |
+| `get_file_content` | Retrieve raw file content | `project`, `path` |
+| `get_file_definitions` | List definitions (functions, classes) in a file | `path` |
+| `get_file_genre` | File type (PLAIN, XREFABLE, IMAGE) | `path` |
+| `get_history` | File revision history | `path`, `start?`, `max?` |
+| `get_annotation` | Annotation (blame) for a file | `path` |
 
 ### Directory & project tools
 
 | Tool | Description | Key parameters |
 |---|---|---|
-| `dir_list` | List directory contents | `path`, `project`, `max_results` |
-| `dir_list_full` | Directory listing with file metadata | `path`, `project`, `max_results` |
-| `project_list` | List all indexed OpenGrok projects | — |
-| `project_info` | Get project metadata (description, indexed status) | `project` |
-| `system_info` | OpenGrok server info (version, index status) | — |
+| `list_directory` | List directory contents | `path` |
+| `list_indexed_projects` | List indexed projects | — |
+| `list_all_projects` | List all projects (including non-indexed) | — |
+| `list_groups` | List project groups | — |
+| `get_group_projects` | Projects within a group (including subgroups) | `group` |
+| `list_project_files` | List files in a project from index | `project` |
+| `list_project_repos` | Repository paths for a project | `project` |
+| `get_project_property` | Per-project property value | `project`, `name` |
+| `get_repo_property` | Repository property (type, branch, remote) | `field`, `repository` |
+
+### System tools
+
+| Tool | Description | Key parameters |
+|---|---|---|
+| `get_suggest_config` | Suggester configuration | — |
+| `get_index_time` | Last index time (ISO 8601) | — |
+| `get_opengrok_version` | OpenGrok version string | — |
+| `health_check` | Check OpenGrok liveness | — |
 
 ### Result format
 

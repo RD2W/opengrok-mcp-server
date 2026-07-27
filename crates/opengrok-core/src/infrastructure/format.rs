@@ -230,6 +230,69 @@ impl ResultFormatter {
         }
         output
     }
+
+    /// Formats a suggest configuration.
+    #[must_use]
+    pub fn format_suggest_config(&self, config: &SuggestConfig) -> String {
+        let mut output = String::from("Suggester configuration:\n");
+        output.push_str(&format!(
+            "{}enabled: {}\n",
+            self.config.line_prefix,
+            if config.enabled { "yes" } else { "no" }
+        ));
+        output.push_str(&format!(
+            "{}max_results: {}\n",
+            self.config.line_prefix, config.max_results
+        ));
+        output.push_str(&format!(
+            "{}min_chars: {}\n",
+            self.config.line_prefix, config.min_chars
+        ));
+        output.push_str(&format!(
+            "{}max_projects: {}\n",
+            self.config.line_prefix, config.max_projects
+        ));
+        output.push_str(&format!(
+            "{}allowed_fields: {}\n",
+            self.config.line_prefix,
+            config.allowed_fields.join(", ")
+        ));
+        output.push_str(&format!(
+            "{}allow_complex_queries: {}\n",
+            self.config.line_prefix, config.allow_complex_queries
+        ));
+        output.push_str(&format!(
+            "{}allow_most_popular: {}\n",
+            self.config.line_prefix, config.allow_most_popular
+        ));
+        output.push_str(&format!(
+            "{}show_scores: {}\n",
+            self.config.line_prefix, config.show_scores
+        ));
+        output.push_str(&format!(
+            "{}show_projects: {}\n",
+            self.config.line_prefix, config.show_projects
+        ));
+        output.push_str(&format!(
+            "{}show_time: {}\n",
+            self.config.line_prefix, config.show_time
+        ));
+        output
+    }
+
+    /// Formats a simple list of strings with a label.
+    #[must_use]
+    pub fn format_simple_list(&self, label: &str, items: &[String]) -> String {
+        if items.is_empty() {
+            return format!("No {label}s found.\n");
+        }
+
+        let mut output = format!("Found {} {label}(s):\n", items.len());
+        for item in items {
+            output.push_str(&format!("{}- {}\n", self.config.line_prefix, item));
+        }
+        output
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -475,5 +538,61 @@ mod tests {
         let output = formatter.format_suggestions(&suggestions);
         assert!(output.contains("funcName"));
         assert!(output.contains("score: 100"));
+    }
+
+    #[test]
+    fn format_suggestions_empty() {
+        let formatter = ResultFormatter::default();
+        let output = formatter.format_suggestions(&[]);
+        assert_eq!(output, "No suggestions found.\n");
+    }
+
+    #[test]
+    fn format_suggest_config_output() {
+        let formatter = ResultFormatter::default();
+        let config = SuggestConfig {
+            enabled: true,
+            max_results: 10,
+            min_chars: 2,
+            allowed_projects: None,
+            max_projects: 100,
+            allowed_fields: vec!["full".into(), "defs".into()],
+            allow_complex_queries: true,
+            allow_most_popular: false,
+            show_scores: true,
+            show_projects: false,
+            show_time: false,
+            rebuild_cron_config: "0 * * * *".into(),
+            build_termination_time: 1800,
+            rebuild_thread_pool_size_in_ncpu_percent: 80,
+            search_thread_pool_size_in_ncpu_percent: 90,
+        };
+        let output = formatter.format_suggest_config(&config);
+        assert!(output.contains("Suggester configuration:"));
+        assert!(output.contains("enabled: yes"));
+        assert!(output.contains("max_results: 10"));
+        assert!(output.contains("min_chars: 2"));
+        assert!(output.contains("allowed_fields: full, defs"));
+        assert!(output.contains("allow_complex_queries: true"));
+        assert!(output.contains("allow_most_popular: false"));
+        assert!(output.contains("show_scores: true"));
+        assert!(output.contains("show_projects: false"));
+    }
+
+    #[test]
+    fn format_simple_list_non_empty() {
+        let formatter = ResultFormatter::default();
+        let items: Vec<String> = vec!["alpha".into(), "beta".into()];
+        let output = formatter.format_simple_list("item", &items);
+        assert!(output.contains("Found 2 item(s)"));
+        assert!(output.contains("- alpha"));
+        assert!(output.contains("- beta"));
+    }
+
+    #[test]
+    fn format_simple_list_empty() {
+        let formatter = ResultFormatter::default();
+        let output = formatter.format_simple_list("widget", &[]);
+        assert_eq!(output, "No widgets found.\n");
     }
 }

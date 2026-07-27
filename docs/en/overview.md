@@ -22,14 +22,14 @@ history, and annotation, but its raw API is not LLM-friendly:
 - The API has quirks (`null` tags, empty `lineNumbers`) that need normalisation
 - Authentication and TLS with corporate CAs must be configured
 
-`opengrok-mcp` wraps all of this into 15 clean MCP tools with proper error
+`opengrok-mcp` wraps all of this into 25 clean MCP tools with proper error
 handling, rate limiting, and result formatting.
 
 ---
 
 ## Features
 
-### 15 MCP tools — full OpenGrok REST API coverage
+### 25 MCP tools — full OpenGrok REST API coverage
 
 | Category | Tools |
 |---|---|
@@ -102,6 +102,6 @@ for local development and remote deployment.
 
 ## Current status
 
-**Pre-1.0.** The core HTTP client, all 15 MCP tools, dual transport, caching, rate
+**Pre-1.0.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
 limiting, TLS, health endpoints, and Docker packaging are implemented and covered
 by **102 tests**. The API is stable but may evolve before 1.0.

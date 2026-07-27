@@ -570,6 +570,36 @@ pub struct Suggestion {
 }
 
 // ---------------------------------------------------------------------------
+// Suggester configuration
+// ---------------------------------------------------------------------------
+
+/// Configuration of the OpenGrok suggester.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SuggestConfig {
+    pub enabled: bool,
+    pub max_results: u32,
+    pub min_chars: u32,
+    #[allow(dead_code)]
+    pub allowed_projects: Option<Vec<String>>,
+    pub max_projects: u32,
+    pub allowed_fields: Vec<String>,
+    pub allow_complex_queries: bool,
+    pub allow_most_popular: bool,
+    pub show_scores: bool,
+    pub show_projects: bool,
+    pub show_time: bool,
+    #[allow(dead_code)]
+    pub rebuild_cron_config: String,
+    #[allow(dead_code)]
+    pub build_termination_time: u32,
+    #[allow(dead_code)]
+    pub rebuild_thread_pool_size_in_ncpu_percent: u32,
+    #[allow(dead_code)]
+    pub search_thread_pool_size_in_ncpu_percent: u32,
+}
+
+// ---------------------------------------------------------------------------
 // Domain errors
 // ---------------------------------------------------------------------------
 
@@ -671,6 +701,37 @@ pub trait OpengrokRepository: Send + Sync {
 
     /// Get per-line annotation (blame) for a file.
     async fn get_annotation(&self, path: &str) -> Result<Vec<AnnotationEntry>, DomainError>;
+
+    /// List all configured project groups.
+    async fn list_groups(&self) -> Result<Vec<String>, DomainError>;
+
+    /// Get all projects (including subgroups) within a group.
+    async fn get_group_projects(&self, group: &str) -> Result<Vec<String>, DomainError>;
+
+    /// List files within a project from the index.
+    async fn list_project_files(&self, project: &str) -> Result<Vec<String>, DomainError>;
+
+    /// List repository paths for a project.
+    async fn list_project_repos(&self, project: &str) -> Result<Vec<String>, DomainError>;
+
+    /// Get a per-project property value.
+    async fn get_project_property(&self, project: &str, name: &str) -> Result<String, DomainError>;
+
+    /// Get a repository property (type, branch, version, etc.).
+    async fn get_repo_property(&self, field: &str, repository: &str)
+    -> Result<String, DomainError>;
+
+    /// Get suggester configuration.
+    async fn get_suggest_config(&self) -> Result<SuggestConfig, DomainError>;
+
+    /// Get OpenGrok web application version.
+    async fn get_opengrok_version(&self) -> Result<String, DomainError>;
+
+    /// Get the time of the last index run (ISO 8601).
+    async fn get_index_time(&self) -> Result<String, DomainError>;
+
+    /// Check whether the OpenGrok web application is alive.
+    async fn health_check(&self) -> Result<bool, DomainError>;
 }
 
 // ---------------------------------------------------------------------------
@@ -705,6 +766,17 @@ pub struct MockOpengrokRepository {
     history_results: std::sync::Mutex<Vec<Result<HistoryResponse, DomainError>>>,
     // Annotation
     annotation_results: std::sync::Mutex<Vec<Result<Vec<AnnotationEntry>, DomainError>>>,
+    // New: groups, projects extra, repos, system, suggest config, index
+    groups_result: std::sync::Mutex<Option<Vec<String>>>,
+    group_projects_results: std::sync::Mutex<Vec<Result<Vec<String>, DomainError>>>,
+    project_files_results: std::sync::Mutex<Vec<Result<Vec<String>, DomainError>>>,
+    project_repos_results: std::sync::Mutex<Vec<Result<Vec<String>, DomainError>>>,
+    project_property_results: std::sync::Mutex<Vec<Result<String, DomainError>>>,
+    repo_property_results: std::sync::Mutex<Vec<Result<String, DomainError>>>,
+    suggest_config_result: std::sync::Mutex<Option<SuggestConfig>>,
+    system_ping_alive: std::sync::atomic::AtomicBool,
+    system_version_result: std::sync::Mutex<Option<String>>,
+    system_indextime_result: std::sync::Mutex<Option<String>>,
 }
 
 impl Default for MockOpengrokRepository {
@@ -730,6 +802,16 @@ impl MockOpengrokRepository {
             all_projects_result: std::sync::Mutex::new(None),
             history_results: std::sync::Mutex::new(Vec::new()),
             annotation_results: std::sync::Mutex::new(Vec::new()),
+            groups_result: std::sync::Mutex::new(None),
+            group_projects_results: std::sync::Mutex::new(Vec::new()),
+            project_files_results: std::sync::Mutex::new(Vec::new()),
+            project_repos_results: std::sync::Mutex::new(Vec::new()),
+            project_property_results: std::sync::Mutex::new(Vec::new()),
+            repo_property_results: std::sync::Mutex::new(Vec::new()),
+            suggest_config_result: std::sync::Mutex::new(None),
+            system_ping_alive: std::sync::atomic::AtomicBool::new(true),
+            system_version_result: std::sync::Mutex::new(None),
+            system_indextime_result: std::sync::Mutex::new(None),
         }
     }
 
@@ -808,6 +890,57 @@ impl MockOpengrokRepository {
     /// Push an annotation result.
     pub fn push_annotation(&self, result: Result<Vec<AnnotationEntry>, DomainError>) {
         self.annotation_results.lock().unwrap().push(result);
+    }
+
+    /// Set the result for `list_groups`.
+    pub fn set_groups(&self, groups: Vec<String>) {
+        *self.groups_result.lock().unwrap() = Some(groups);
+    }
+
+    /// Push a group projects result.
+    pub fn push_group_projects(&self, result: Result<Vec<String>, DomainError>) {
+        self.group_projects_results.lock().unwrap().push(result);
+    }
+
+    /// Push a project files result.
+    pub fn push_project_files(&self, result: Result<Vec<String>, DomainError>) {
+        self.project_files_results.lock().unwrap().push(result);
+    }
+
+    /// Push a project repos result.
+    pub fn push_project_repos(&self, result: Result<Vec<String>, DomainError>) {
+        self.project_repos_results.lock().unwrap().push(result);
+    }
+
+    /// Push a project property result.
+    pub fn push_project_property(&self, result: Result<String, DomainError>) {
+        self.project_property_results.lock().unwrap().push(result);
+    }
+
+    /// Push a repo property result.
+    pub fn push_repo_property(&self, result: Result<String, DomainError>) {
+        self.repo_property_results.lock().unwrap().push(result);
+    }
+
+    /// Set the result for `get_suggest_config`.
+    pub fn set_suggest_config(&self, config: SuggestConfig) {
+        *self.suggest_config_result.lock().unwrap() = Some(config);
+    }
+
+    /// Set whether health_check returns true or false.
+    pub fn set_ping_alive(&self, alive: bool) {
+        self.system_ping_alive
+            .store(alive, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    /// Set the result for `get_opengrok_version`.
+    pub fn set_version(&self, version: String) {
+        *self.system_version_result.lock().unwrap() = Some(version);
+    }
+
+    /// Set the result for `get_index_time`.
+    pub fn set_index_time(&self, time: String) {
+        *self.system_indextime_result.lock().unwrap() = Some(time);
     }
 }
 
@@ -898,6 +1031,92 @@ impl OpengrokRepository for MockOpengrokRepository {
             .unwrap()
             .pop()
             .unwrap_or(Err(DomainError::NotImplemented))
+    }
+
+    async fn list_groups(&self) -> Result<Vec<String>, DomainError> {
+        self.groups_result
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or(DomainError::NotImplemented)
+    }
+
+    async fn get_group_projects(&self, _group: &str) -> Result<Vec<String>, DomainError> {
+        self.group_projects_results
+            .lock()
+            .unwrap()
+            .pop()
+            .unwrap_or(Err(DomainError::NotImplemented))
+    }
+
+    async fn list_project_files(&self, _project: &str) -> Result<Vec<String>, DomainError> {
+        self.project_files_results
+            .lock()
+            .unwrap()
+            .pop()
+            .unwrap_or(Err(DomainError::NotImplemented))
+    }
+
+    async fn list_project_repos(&self, _project: &str) -> Result<Vec<String>, DomainError> {
+        self.project_repos_results
+            .lock()
+            .unwrap()
+            .pop()
+            .unwrap_or(Err(DomainError::NotImplemented))
+    }
+
+    async fn get_project_property(
+        &self,
+        _project: &str,
+        _name: &str,
+    ) -> Result<String, DomainError> {
+        self.project_property_results
+            .lock()
+            .unwrap()
+            .pop()
+            .unwrap_or(Err(DomainError::NotImplemented))
+    }
+
+    async fn get_repo_property(
+        &self,
+        _field: &str,
+        _repository: &str,
+    ) -> Result<String, DomainError> {
+        self.repo_property_results
+            .lock()
+            .unwrap()
+            .pop()
+            .unwrap_or(Err(DomainError::NotImplemented))
+    }
+
+    async fn get_suggest_config(&self) -> Result<SuggestConfig, DomainError> {
+        self.suggest_config_result
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or(DomainError::NotImplemented)
+    }
+
+    async fn get_opengrok_version(&self) -> Result<String, DomainError> {
+        self.system_version_result
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or(DomainError::NotImplemented)
+    }
+
+    async fn get_index_time(&self) -> Result<String, DomainError> {
+        self.system_indextime_result
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or(DomainError::NotImplemented)
+    }
+
+    async fn health_check(&self) -> Result<bool, DomainError> {
+        Ok(self
+            .system_ping_alive
+            .load(std::sync::atomic::Ordering::Relaxed))
     }
 }
 

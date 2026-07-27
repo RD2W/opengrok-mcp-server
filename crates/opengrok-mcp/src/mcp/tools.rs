@@ -187,6 +187,44 @@ pub struct GetAnnotationParams {
     pub path: String,
 }
 
+// -- New public endpoints ----------------------------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct GetGroupProjectsParams {
+    #[schemars(description = "Group name")]
+    pub group: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ListProjectFilesParams {
+    #[schemars(description = "Project name")]
+    pub project: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ListProjectReposParams {
+    #[schemars(description = "Project name")]
+    pub project: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct GetProjectPropertyParams {
+    #[schemars(description = "Project name")]
+    pub project: String,
+    #[schemars(description = "Property name")]
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct GetRepoPropertyParams {
+    #[schemars(
+        description = "Property field (type, branch, working, remote, parent, currentVersion, historyEnabled)"
+    )]
+    pub field: String,
+    #[schemars(description = "Repository path relative to source root")]
+    pub repository: String,
+}
+
 // -- Defaults --------------------------------------------------------------
 
 const fn default_max_results() -> u32 {

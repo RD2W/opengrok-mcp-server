@@ -21,5 +21,11 @@ config/certs/*.pem
 # Release artifacts
 builds/
 
+# Research notes and hypotheses (local only)
+docs/hypotheses/
+
+# Superpowers specs and design docs (local only)
+docs/superpowers/
+
 # Agent guidance (local only)
 AGENTS.md

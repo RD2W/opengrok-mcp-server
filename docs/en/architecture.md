@@ -96,8 +96,8 @@ other contexts.
 
 | Module | Lines | Purpose |
 |---|---|---|
-| `mcp/mod.rs` | 361 | MCP server initialisation, tool handler dispatch, error mapping (`CoreError` → MCP error codes) |
-| `mcp/tools.rs` | 194 | Tool type definitions with JSON Schema (schemars): names, descriptions, parameter types, defaults |
+| `mcp/mod.rs` | 485 | MCP server initialisation, 25 tool handler dispatch, error mapping (`CoreError` → MCP error codes) |
+| `mcp/tools.rs` | 230 | Tool type definitions with JSON Schema (schemars): names, descriptions, parameter types, defaults (25 tools) |
 | `config.rs` | 466 | Config loading: TOML parsing, env var overrides, validation |
 | `transport/http.rs` | 67 | Axum router: MCP endpoint, health, readiness, metrics |
 | `transport/stdio.rs` | 20 | stdin/stdout transport via rmcp |
