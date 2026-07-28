@@ -41,13 +41,13 @@ VOLUME ["${CONFIG_DIR}"]
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
     CMD wget -qO- http://localhost:${HEALTHCHECK_PORT}${HEALTHCHECK_PATH} || exit 1
 
-LABEL org.opencontainers.image.title="opengrok-mcp"
-LABEL org.opencontainers.image.description="MCP server for OpenGrok code search (AOSP-scale codebases)"
-LABEL org.opencontainers.image.vendor="RD2W"
-LABEL org.opencontainers.image.authors="Maxim Krutovercev (mkrutovercev@yandex.ru)"
-LABEL org.opencontainers.image.documentation="https://github.com/RD2W/opengrok-mcp-server"
-LABEL org.opencontainers.image.url="https://github.com/RD2W/opengrok-mcp-server"
-LABEL org.opencontainers.image.source="https://github.com/RD2W/opengrok-mcp-server"
-LABEL org.opencontainers.image.licenses="GPL-3.0-or-later"
+LABEL org.opencontainers.image.title="opengrok-mcp" \
+      org.opencontainers.image.description="MCP server for OpenGrok code search (AOSP-scale codebases)" \
+      org.opencontainers.image.vendor="RD2W" \
+      org.opencontainers.image.authors="Maxim Krutovercev (mkrutovercev@yandex.ru)" \
+      org.opencontainers.image.documentation="https://github.com/RD2W/opengrok-mcp-server" \
+      org.opencontainers.image.url="https://github.com/RD2W/opengrok-mcp-server" \
+      org.opencontainers.image.source="https://github.com/RD2W/opengrok-mcp-server" \
+      org.opencontainers.image.licenses="GPL-3.0-or-later"
 
 ENTRYPOINT ["opengrok-mcp"]
