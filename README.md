@@ -146,7 +146,7 @@ Full documentation is available in `docs/en/`:
 ### Development
 
 ```bash
-cargo test                    # 102 tests
+cargo test                    # 158 tests
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```
@@ -301,7 +301,7 @@ allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp", "opengrok-mcp:8004"]
 ### Разработка
 
 ```bash
-cargo test                    # 102 теста
+cargo test                    # 158 тестов
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```

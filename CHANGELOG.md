@@ -4,6 +4,18 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **rmcp upgraded to 3.0** (was 2.2) — MCP 2026-07-28 protocol support:
+  stateless discovery, protocol negotiation, multi round-trip requests (MRTR).
+  Tool return types handled automatically by `#[tool_router]` macro.
+- **HTTP transport: swapped `LocalSessionManager` → `NeverSessionManager`**
+  for fully stateless Streamable HTTP (no session tracking, no GET/DELETE).
+- **Server announces both protocol versions**: 2026-07-28 (preferred) and
+  2025-11-25 (legacy fallback) via `supported_protocol_versions()`.
+
 ## [1.0.0] — 2026-07-27
 
 First stable release. 🚀

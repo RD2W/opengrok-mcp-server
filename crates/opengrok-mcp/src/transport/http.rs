@@ -9,7 +9,7 @@ use axum::{Router, routing::get};
 use opengrok_core::application::OpengrokService;
 use opengrok_core::domain::OpengrokRepository;
 use rmcp::transport::streamable_http_server::{
-    StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
+    StreamableHttpServerConfig, StreamableHttpService, session::never::NeverSessionManager,
 };
 
 use crate::config::Config;
@@ -23,14 +23,14 @@ pub async fn run_http<R: OpengrokRepository + Send + Sync + 'static>(
 ) -> anyhow::Result<()> {
     let service = Arc::new(service);
 
-    // Factory creates a fresh OpengrokServer per MCP session,
+    // Factory creates a fresh OpengrokServer per request,
     // all sharing the same OpengrokService (cache, rate-limiter, repo).
+    // NeverSessionManager: stateless, no session tracking (2026-07-28 protocol).
     let service_factory = {
         let svc = service.clone();
         move || Ok(OpengrokServer::new((*svc).clone()))
     };
 
-    // Build server config: use defaults (localhost etc.) + user-configured hosts
     let mut server_config = StreamableHttpServerConfig::default();
     if !config.transport.allowed_hosts.is_empty() {
         server_config = server_config.with_allowed_hosts(&config.transport.allowed_hosts);
@@ -38,7 +38,7 @@ pub async fn run_http<R: OpengrokRepository + Send + Sync + 'static>(
 
     let mcp_service = StreamableHttpService::new(
         service_factory,
-        Arc::new(LocalSessionManager::default()),
+        Arc::new(NeverSessionManager::default()),
         server_config,
     );
 

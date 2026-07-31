@@ -194,10 +194,11 @@ healthcheck:
 
 | Инструмент | Описание | Основные параметры |
 |---|---|---|
-| `file_content` | Получение содержимого файла с номерами строк | `path`, `project`, `start_line`, `end_line` |
-| `file_xref` | Перекрёстные ссылки (использование символов) для файла | `path`, `project` |
-| `file_history` | История Git для файла | `path`, `project` |
-| `file_annotate` | Blame/аннотация для файла | `path`, `project` |
+| `get_file_content` | Получение содержимого файла | `project`, `path` |
+| `get_file_definitions` | Определения (функции, классы) в файле | `path` |
+| `get_file_genre` | Тип файла (PLAIN, XREFABLE, IMAGE) | `path` |
+| `get_history` | История изменений файла | `path`, `start?`, `max?` |
+| `get_annotation` | Аннотация (blame) для файла | `path` |
 
 ### Инструменты для директорий и проектов
 
@@ -212,16 +213,6 @@ healthcheck:
 | `list_project_repos` | Пути репозиториев проекта | `project` |
 | `get_project_property` | Per-project свойство | `project`, `name` |
 | `get_repo_property` | Свойство репозитория (тип, ветка, remote) | `field`, `repository` |
-
-### Инструменты для файлов
-
-| Инструмент | Описание | Основные параметры |
-|---|---|---|
-| `get_file_content` | Получение содержимого файла | `project`, `path` |
-| `get_file_definitions` | Определения (функции, классы) в файле | `path` |
-| `get_file_genre` | Тип файла (PLAIN, XREFABLE, IMAGE) | `path` |
-| `get_history` | История изменений файла | `path`, `start?`, `max?` |
-| `get_annotation` | Аннотация (blame) для файла | `path` |
 
 ### Системные инструменты
 
@@ -256,7 +247,7 @@ healthcheck:
 установив параметр `page`:
 
 ```
-Tool: search
+Tool: search_code
 Query: "init_boot_images"
 Project: "aosp"
 Page: 2

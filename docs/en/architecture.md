@@ -99,7 +99,7 @@ other contexts.
 | `mcp/mod.rs` | 485 | MCP server initialisation, 25 tool handler dispatch, error mapping (`CoreError` → MCP error codes) |
 | `mcp/tools.rs` | 230 | Tool type definitions with JSON Schema (schemars): names, descriptions, parameter types, defaults (25 tools) |
 | `config.rs` | 466 | Config loading: TOML parsing, env var overrides, validation |
-| `transport/http.rs` | 67 | Axum router: MCP endpoint, health, readiness, metrics |
+| `transport/http.rs` | 67 | Axum router with `NeverSessionManager` (stateless, MCP 2026-07-28 protocol): MCP endpoint, health, readiness, metrics |
 | `transport/stdio.rs` | 20 | stdin/stdout transport via rmcp |
 | `health.rs` | 165 | Health check handlers: liveness, readiness with OpenGrok probe, Prometheus metrics collection |
 | `main.rs` | 124 | Entry point: CLI parsing, config init, transport selection, shutdown signal handling |

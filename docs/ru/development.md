@@ -25,7 +25,7 @@ git checkout -b feat/моя-фича
 ## Запуск тестов
 
 ```bash
-# Все тесты (102 на момент написания)
+# Все тесты (158 на момент написания)
 cargo test --workspace
 
 # Отдельный крейт
@@ -97,8 +97,8 @@ Workflow GitHub Actions: `.github/workflows/ci.yml`
 
 4. **Определите схему инструмента** в `opengrok-mcp/src/mcp/tools.rs`:
    ```rust
-   #[tool(description = "Поиск определения символа по кодовой базе")]
-   async fn search_define(
+    #[tool(description = "Поиск определения символа по кодовой базе")]
+    async fn search_definition(
        symbol: String,
        #[param(description = "Имя проекта для ограничения области поиска")]
        project: Option<String>,
