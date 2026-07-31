@@ -99,7 +99,7 @@ MCP** — это чистая HTTP-клиентская библиотека, к
 | `mcp/mod.rs` | 485 | Инициализация MCP-сервера, диспетчеризация обработчиков 25 инструментов, маппинг ошибок (`CoreError` → коды ошибок MCP) |
 | `mcp/tools.rs` | 230 | Определения типов 25 инструментов с JSON Schema (schemars): имена, описания, типы параметров, значения по умолчанию |
 | `config.rs` | 466 | Загрузка конфигурации: разбор TOML, переопределение через env, валидация |
-| `transport/http.rs` | 67 | Маршрутизатор Axum: MCP-эндпоинт, health, readiness, metrics |
+| `transport/http.rs` | 67 | Маршрутизатор Axum с `NeverSessionManager` (stateless, протокол MCP 2026-07-28): MCP-эндпоинт, health, readiness, metrics |
 | `transport/stdio.rs` | 20 | Транспорт stdin/stdout через rmcp |
 | `health.rs` | 165 | Обработчики health check: живучесть, готовность с пробным запросом к OpenGrok, сбор метрик Prometheus |
 | `main.rs` | 124 | Точка входа: разбор CLI, инициализация конфигурации, выбор транспорта, обработка сигналов завершения |

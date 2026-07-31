@@ -10,6 +10,7 @@
 
 pub mod tools;
 
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use opengrok_core::application::OpengrokService;
@@ -483,5 +484,9 @@ impl<R: OpengrokRepository + Send + Sync + 'static> ServerHandler for OpengrokSe
                 .into(),
         );
         info
+    }
+
+    fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
+        Cow::Borrowed(&[ProtocolVersion::V_2026_07_28, ProtocolVersion::V_2025_11_25])
     }
 }

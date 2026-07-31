@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/opengrok-core", "crates/opengrok-mcp"]
 
 [workspace.package]
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 rust-version = "1.97"
 license = "GPL-3.0-or-later"
@@ -27,7 +27,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util
 chrono = "0.4"
 
 # Binary dependencies
-rmcp = { version = "2.2", default-features = false, features = ["server", "macros", "transport-io", "transport-streamable-http-server", "schemars", "base64"] }
+rmcp = { version = "3", default-features = false, features = ["server", "macros", "transport-io", "transport-streamable-http-server", "schemars", "base64"] }
 schemars = "1"
 axum = "0.8"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

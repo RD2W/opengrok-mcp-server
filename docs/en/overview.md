@@ -33,10 +33,10 @@ handling, rate limiting, and result formatting.
 
 | Category | Tools |
 |---|---|
-| Search (plain text) | `search`, `search_full`, `search_raw` |
-| Search (structured) | `search_define`, `search_suggest`, `search_hist` |
-| File access | `file_content`, `file_xref`, `file_history`, `file_annotate` |
-| Metadata | `dir_list`, `dir_list_full`, `project_list`, `project_info`, `system_info` |
+| Search (7) | `search_code`, `search_definition`, `search_references`, `search_file_path`, `search_history`, `advanced_search`, `suggest` |
+| Files (5) | `get_file_content`, `get_file_definitions`, `get_file_genre`, `get_history`, `get_annotation` |
+| Navigation (8) | `list_directory`, `list_indexed_projects`, `list_all_projects`, `list_groups`, `get_group_projects`, `list_project_files`, `list_project_repos`, `get_project_property` |
+| System (5) | `get_repo_property`, `get_suggest_config`, `get_index_time`, `get_opengrok_version`, `health_check` |
 
 Each tool declares its parameters via JSON Schema (schemars), so LLM clients
 automatically know the expected inputs and outputs — no manual prompt engineering
@@ -102,6 +102,7 @@ for local development and remote deployment.
 
 ## Current status
 
-**Pre-1.0.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
+**v1.0.0.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
 limiting, TLS, health endpoints, and Docker packaging are implemented and covered
-by **102 tests**. The API is stable but may evolve before 1.0.
+by **158 tests**. Supports MCP 2026-07-28 protocol (stateless Streamable HTTP,
+protocol negotiation) with legacy 2025-11-25 fallback.

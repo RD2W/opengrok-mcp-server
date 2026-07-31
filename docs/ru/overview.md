@@ -33,10 +33,10 @@ LLM-агентам (Claude Desktop, Codex и др.) нужно искать и �
 
 | Категория | Инструменты |
 |---|---|
-| Поиск (обычный текст) | `search`, `search_full`, `search_raw` |
-| Поиск (структурированный) | `search_define`, `search_suggest`, `search_hist` |
-| Доступ к файлам | `file_content`, `file_xref`, `file_history`, `file_annotate` |
-| Метаданные | `dir_list`, `dir_list_full`, `project_list`, `project_info`, `system_info` |
+| Поиск (7) | `search_code`, `search_definition`, `search_references`, `search_file_path`, `search_history`, `advanced_search`, `suggest` |
+| Файлы (5) | `get_file_content`, `get_file_definitions`, `get_file_genre`, `get_history`, `get_annotation` |
+| Навигация (8) | `list_directory`, `list_indexed_projects`, `list_all_projects`, `list_groups`, `get_group_projects`, `list_project_files`, `list_project_repos`, `get_project_property` |
+| Система (5) | `get_repo_property`, `get_suggest_config`, `get_index_time`, `get_opengrok_version`, `health_check` |
 
 Каждый инструмент описывает свои параметры через JSON Schema (schemars),
 поэтому LLM-клиенты автоматически знают ожидаемые входные и выходные данные —
@@ -103,7 +103,7 @@ LLM-агентам (Claude Desktop, Codex и др.) нужно искать и �
 
 ## Текущий статус
 
-**До версии 1.0.** HTTP-клиент, все 25 инструментов MCP, двойной транспорт,
+**v1.0.0.** HTTP-клиент, все 25 инструментов MCP, двойной транспорт,
 кэширование, ограничение частоты, TLS, health-эндпоинты и упаковка в Docker
-реализованы и покрыты **102 тестами**. API стабилен, но может изменяться до
-выхода версии 1.0.
+реализованы и покрыты **158 тестами**. Поддержка MCP 2026-07-28 (stateless
+Streamable HTTP, согласование протокола) с fallback на 2025-11-25.

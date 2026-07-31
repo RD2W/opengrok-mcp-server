@@ -21,4 +21,4 @@ Include steps to reproduce and the impact. We'll acknowledge and work on a fix; 
 
 ## Supported versions
 
-This is pre-1.0 software; fixes land on the latest `dev`/release branch. Pin a released tag for reproducible builds (`Cargo.lock` is committed).
+v1.0.0 and later. Fixes land on the latest `dev`/release branch. Pin a released tag for reproducible builds (`Cargo.lock` is committed).

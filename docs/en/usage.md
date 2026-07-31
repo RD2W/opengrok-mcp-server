@@ -245,7 +245,7 @@ When `has_more` is `true`, the client can request additional pages by setting
 the `page` parameter:
 
 ```
-Tool: search
+Tool: search_code
 Query: "init_boot_images"
 Project: "aosp"
 Page: 2

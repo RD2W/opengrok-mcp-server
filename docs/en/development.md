@@ -25,7 +25,7 @@ git checkout -b feat/my-feature
 ## Running tests
 
 ```bash
-# All tests (102 at time of writing)
+# All tests (158 at time of writing)
 cargo test --workspace
 
 # Specific crate
@@ -97,8 +97,8 @@ See any existing source file for the exact format.
 
 4. **Define the tool schema** in `opengrok-mcp/src/mcp/tools.rs`:
    ```rust
-   #[tool(description = "Search for a symbol definition across the codebase")]
-   async fn search_define(
+    #[tool(description = "Search for a symbol definition across the codebase")]
+    async fn search_definition(
        symbol: String,
        #[param(description = "Project name to limit search scope")]
        project: Option<String>,
