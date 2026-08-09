@@ -16,10 +16,12 @@ use serde::{Deserialize, Serialize};
 
 const ENV_OPENGROK_URL: &str = "OPENGROK_URL";
 const ENV_OPENGROK_CA_CERT: &str = "OPENGROK_CA_CERT";
+const ENV_OPENGROK_CA_CERT_DIR: &str = "OPENGROK_CA_CERT_DIR";
 const ENV_SSL_CERT_FILE: &str = "SSL_CERT_FILE";
 const ENV_SSL_CERT_DIR: &str = "SSL_CERT_DIR";
 const ENV_OPENGROK_VERIFY_SSL: &str = "OPENGROK_VERIFY_SSL";
 const ENV_RUST_LOG: &str = "RUST_LOG";
+const ENV_MCP_LOG_LEVEL: &str = "MCP_LOG_LEVEL";
 const ENV_OPENGROK_TOKEN: &str = "OPENGROK_TOKEN";
 const ENV_MCP_TOKEN: &str = "MCP_TOKEN";
 
@@ -109,34 +111,52 @@ impl Config {
     }
 
     fn apply_env_overrides(&mut self) {
-        // Base URL
+        // --- OpenGrok: connection ------------------------------------------
+
         if let Ok(val) = std::env::var(ENV_OPENGROK_URL) {
             self.opengrok.base_url = val;
         }
+        if let Ok(val) = std::env::var("OPENGROK_TIMEOUT_SECS")
+            && let Ok(v) = val.parse::<u64>()
+        {
+            self.opengrok.timeout_secs = v;
+        }
 
-        // TLS
+        // --- OpenGrok: TLS -------------------------------------------------
+
+        // Service-specific CA cert (wins over SSL_CERT_FILE)
         if let Ok(val) = std::env::var(ENV_OPENGROK_CA_CERT) {
             self.opengrok.ca_cert = Some(val);
         }
-        if let Ok(val) = std::env::var(ENV_SSL_CERT_FILE) {
+        // Shared CA cert fallback (only if OPENGROK_CA_CERT not set)
+        if self.opengrok.ca_cert.is_none()
+            && let Ok(val) = std::env::var(ENV_SSL_CERT_FILE)
+        {
             self.opengrok.ca_cert = Some(val);
         }
-        if let Ok(val) = std::env::var(ENV_SSL_CERT_DIR) {
+        // Service-specific CA cert dir (wins over SSL_CERT_DIR)
+        if let Ok(val) = std::env::var(ENV_OPENGROK_CA_CERT_DIR) {
+            self.opengrok.ca_cert_dir = Some(val);
+        }
+        // Shared CA cert dir fallback
+        if self.opengrok.ca_cert_dir.is_none()
+            && let Ok(val) = std::env::var(ENV_SSL_CERT_DIR)
+        {
             self.opengrok.ca_cert_dir = Some(val);
         }
         if let Ok(val) = std::env::var(ENV_OPENGROK_VERIFY_SSL)
-            && (val.eq_ignore_ascii_case("false") || val == "0")
+            && (val.eq_ignore_ascii_case("false") || val == "0" || val.eq_ignore_ascii_case("no"))
         {
             self.opengrok.verify_ssl = false;
         }
 
-        // Auth: token from env
+        // --- OpenGrok: auth (indirect — env var name from TOML) -----------
+
         if let Some(ref token_env) = self.opengrok.auth.token_env.clone()
             && let Ok(token) = std::env::var(token_env)
         {
             self.opengrok.auth.token = Some(token);
         }
-        // Auth: basic from env
         if let Some(ref username_env) = self.opengrok.auth.username_env.clone()
             && let Ok(username) = std::env::var(username_env)
         {
@@ -148,14 +168,88 @@ impl Config {
             self.opengrok.auth.password = Some(password);
         }
 
-        // Log level
-        if let Ok(val) = std::env::var(ENV_RUST_LOG) {
-            self.log.level = val;
+        // --- Service --------------------------------------------------------
+
+        apply_bool_env("MCP_STRIP_HTML", &mut self.service.strip_html);
+        if let Ok(val) = std::env::var("MCP_MAX_HITS_PER_FILE")
+            && let Ok(v) = val.parse::<u32>()
+        {
+            self.service.max_hits_per_file = v;
+        }
+        if let Ok(val) = std::env::var("MCP_DEFAULT_MAX_RESULTS")
+            && let Ok(v) = val.parse::<u32>()
+        {
+            self.service.default_max_results = v;
         }
 
+        // --- Cache ----------------------------------------------------------
+
+        apply_bool_env("MCP_CACHE_ENABLED", &mut self.cache.enabled);
+        if let Ok(val) = std::env::var("MCP_CACHE_TTL_SECS")
+            && let Ok(v) = val.parse::<u64>()
+        {
+            self.cache.ttl_secs = v;
+        }
+        if let Ok(val) = std::env::var("MCP_CACHE_MAX_ENTRIES")
+            && let Ok(v) = val.parse::<usize>()
+        {
+            self.cache.max_entries = v;
+        }
+
+        // --- Rate limit -----------------------------------------------------
+
+        apply_bool_env("MCP_RATE_LIMIT_ENABLED", &mut self.rate_limit.enabled);
+        if let Ok(val) = std::env::var("MCP_RATE_LIMIT_RPS")
+            && let Ok(v) = val.parse::<u32>()
+        {
+            self.rate_limit.requests_per_second = v;
+        }
+        if let Ok(val) = std::env::var("MCP_RATE_LIMIT_BURST")
+            && let Ok(v) = val.parse::<u32>()
+        {
+            self.rate_limit.burst = v;
+        }
+
+        // --- Transport ------------------------------------------------------
+
+        if let Ok(val) = std::env::var("MCP_TRANSPORT") {
+            self.transport.mode = val;
+        }
+        if let Ok(val) = std::env::var("MCP_BIND_ADDR") {
+            self.transport.bind_addr = val;
+        }
+        if let Ok(val) = std::env::var("MCP_HTTP_PATH") {
+            self.transport.http_path = val;
+        }
+        if let Ok(val) = std::env::var("MCP_HEALTH_PATH") {
+            self.transport.health_path = val;
+        }
+        if let Ok(val) = std::env::var("MCP_READY_PATH") {
+            self.transport.ready_path = val;
+        }
+        if let Ok(val) = std::env::var("MCP_METRICS_PATH") {
+            self.transport.metrics_path = val;
+        }
+        if let Ok(val) = std::env::var("MCP_ALLOWED_HOSTS") {
+            self.transport.allowed_hosts = val
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
         // MCP server-side token auth (inbound, not OpenGrok API auth)
         if let Ok(token) = std::env::var(&self.transport.mcp_token_env) {
             self.transport.mcp_token = Some(token);
+        }
+
+        // --- Log ------------------------------------------------------------
+
+        // MCP_LOG_LEVEL wins over RUST_LOG
+        if let Ok(val) = std::env::var(ENV_MCP_LOG_LEVEL) {
+            self.log.level = val;
+        }
+        if let Ok(val) = std::env::var(ENV_RUST_LOG) {
+            self.log.level = val;
         }
     }
 
@@ -398,6 +492,23 @@ pub enum ConfigError {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Sets a bool from an env var. Accepts `true`/`false`/`1`/`0`/`yes`/`no`
+/// (case-insensitive). If the var is not set, the target is unchanged.
+fn apply_bool_env(var: &str, target: &mut bool) {
+    if let Ok(val) = std::env::var(var) {
+        if val.eq_ignore_ascii_case("true") || val == "1" || val.eq_ignore_ascii_case("yes") {
+            *target = true;
+        } else if val.eq_ignore_ascii_case("false") || val == "0" || val.eq_ignore_ascii_case("no")
+        {
+            *target = false;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -406,9 +517,37 @@ mod tests {
     use super::*;
 
     #[test]
+    fn apply_bool_env_true_values() {
+        for val in &["true", "TRUE", "1", "yes", "YES"] {
+            unsafe { std::env::set_var("__TEST_BOOL_TRUE", val) };
+            let mut target = false;
+            apply_bool_env("__TEST_BOOL_TRUE", &mut target);
+            assert!(target, "expected true for '{val}'");
+        }
+        unsafe { std::env::remove_var("__TEST_BOOL_TRUE") };
+    }
+
+    #[test]
+    fn apply_bool_env_false_values() {
+        for val in &["false", "FALSE", "0", "no", "NO"] {
+            unsafe { std::env::set_var("__TEST_BOOL_FALSE", val) };
+            let mut target = true;
+            apply_bool_env("__TEST_BOOL_FALSE", &mut target);
+            assert!(!target, "expected false for '{val}'");
+        }
+        unsafe { std::env::remove_var("__TEST_BOOL_FALSE") };
+    }
+
+    #[test]
+    fn apply_bool_env_no_op_if_unset() {
+        let mut target = true;
+        apply_bool_env("__NONEXISTENT_ENV_VAR_XYZ", &mut target);
+        assert!(target, "target should remain unchanged");
+    }
+
+    #[test]
     fn default_config_validates_fails_no_base_url() {
         let config = Config::default();
-        // Default has empty base_url — should fail validation
         let result = config.validate();
         assert!(result.is_err());
     }
@@ -458,9 +597,7 @@ unknown_field = 42
 
     #[test]
     fn env_override_base_url() {
-        // Can't set env in tests easily; test the mechanism
         let mut config = Config::default();
-        // Simulate env var behavior
         config.opengrok.base_url = "https://from-env.example.com".into();
         assert_eq!(config.opengrok.base_url, "https://from-env.example.com");
     }
@@ -469,7 +606,6 @@ unknown_field = 42
     fn auth_token_from_env() {
         let mut config = Config::default();
         config.opengrok.auth.token_env = Some("TEST_TOKEN".into());
-        // Simulate env load: token is None until loaded from env
         assert!(config.opengrok.auth.token.is_none());
     }
 
@@ -494,5 +630,107 @@ allowed_hosts = ["host-a", "host-b:8004"]
             config.transport.allowed_hosts,
             vec!["host-a", "host-b:8004"]
         );
+    }
+
+    #[test]
+    fn env_override_transport_fields() {
+        unsafe {
+            std::env::set_var("__TEST_BIND_ADDR", "0.0.0.0:9999");
+            std::env::set_var("__TEST_HTTP_PATH", "/api");
+            std::env::set_var("__TEST_HEALTH_PATH", "/h");
+            std::env::set_var("__TEST_READY_PATH", "/r");
+            std::env::set_var("__TEST_METRICS_PATH", "/m");
+        }
+
+        let mut config = Config::default();
+        if let Ok(val) = std::env::var("__TEST_BIND_ADDR") {
+            config.transport.bind_addr = val;
+        }
+        if let Ok(val) = std::env::var("__TEST_HTTP_PATH") {
+            config.transport.http_path = val;
+        }
+        if let Ok(val) = std::env::var("__TEST_HEALTH_PATH") {
+            config.transport.health_path = val;
+        }
+        if let Ok(val) = std::env::var("__TEST_READY_PATH") {
+            config.transport.ready_path = val;
+        }
+        if let Ok(val) = std::env::var("__TEST_METRICS_PATH") {
+            config.transport.metrics_path = val;
+        }
+
+        assert_eq!(config.transport.bind_addr, "0.0.0.0:9999");
+        assert_eq!(config.transport.http_path, "/api");
+        assert_eq!(config.transport.health_path, "/h");
+        assert_eq!(config.transport.ready_path, "/r");
+        assert_eq!(config.transport.metrics_path, "/m");
+
+        unsafe {
+            std::env::remove_var("__TEST_BIND_ADDR");
+            std::env::remove_var("__TEST_HTTP_PATH");
+            std::env::remove_var("__TEST_HEALTH_PATH");
+            std::env::remove_var("__TEST_READY_PATH");
+            std::env::remove_var("__TEST_METRICS_PATH");
+        }
+    }
+
+    #[test]
+    fn env_override_service_numeric_fields() {
+        unsafe {
+            std::env::set_var("__TEST_MAX_HITS", "42");
+            std::env::set_var("__TEST_MAX_RESULTS", "99");
+        }
+
+        let mut config = Config::default();
+        if let Ok(val) = std::env::var("__TEST_MAX_HITS")
+            && let Ok(v) = val.parse::<u32>()
+        {
+            config.service.max_hits_per_file = v;
+        }
+        if let Ok(val) = std::env::var("__TEST_MAX_RESULTS")
+            && let Ok(v) = val.parse::<u32>()
+        {
+            config.service.default_max_results = v;
+        }
+
+        assert_eq!(config.service.max_hits_per_file, 42);
+        assert_eq!(config.service.default_max_results, 99);
+
+        unsafe {
+            std::env::remove_var("__TEST_MAX_HITS");
+            std::env::remove_var("__TEST_MAX_RESULTS");
+        }
+    }
+
+    #[test]
+    fn env_override_allowed_hosts_from_csv() {
+        let mut config = Config::default();
+        let raw = "host-a, host-b:8004 , 127.0.0.1";
+        config.transport.allowed_hosts = raw
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        assert_eq!(
+            config.transport.allowed_hosts,
+            vec!["host-a", "host-b:8004", "127.0.0.1"]
+        );
+    }
+
+    #[test]
+    fn env_override_verify_ssl_disabled() {
+        let mut opengrok = OpengrokConfig::default();
+        assert!(opengrok.verify_ssl);
+
+        // Simulate: OPENGROK_VERIFY_SSL=false
+        for val in &["false", "FALSE", "0", "no", "NO"] {
+            let disabled =
+                val.eq_ignore_ascii_case("false") || *val == "0" || val.eq_ignore_ascii_case("no");
+            if disabled {
+                opengrok.verify_ssl = false;
+            }
+            assert!(!opengrok.verify_ssl, "expected false for '{val}'");
+            opengrok.verify_ssl = true; // reset
+        }
     }
 }
