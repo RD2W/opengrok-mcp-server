@@ -24,6 +24,7 @@ use rmcp::tool_handler;
 use rmcp::tool_router;
 
 use self::tools::*;
+use crate::health::metrics;
 
 // ---------------------------------------------------------------------------
 // Server struct
@@ -59,7 +60,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
     }
 
     fn to_projects(&self, maybe_project: &Option<String>) -> Vec<String> {
-        maybe_project.clone().map(|p| vec![p]).unwrap_or_default()
+        match maybe_project {
+            Some(p) => vec![p.clone()],
+            None => vec![],
+        }
     }
 
     fn text_result(text: String) -> CallToolResult {
@@ -85,6 +89,8 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<SearchCodeParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
+        metrics().record_search();
         let req = SearchRequest {
             full: Some(params.query),
             projects: self.to_projects(&params.project),
@@ -93,7 +99,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.search(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -105,6 +114,8 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<SearchDefinitionParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
+        metrics().record_search();
         let req = SearchRequest {
             def: Some(params.symbol),
             projects: self.to_projects(&params.project),
@@ -113,7 +124,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.search(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -123,6 +137,8 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<SearchReferencesParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
+        metrics().record_search();
         let req = SearchRequest {
             symbol: Some(params.symbol),
             projects: self.to_projects(&params.project),
@@ -131,7 +147,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.search(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -143,6 +162,8 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<SearchFilePathParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
+        metrics().record_search();
         let req = SearchRequest {
             path: Some(params.path),
             projects: self.to_projects(&params.project),
@@ -151,7 +172,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.search(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -161,6 +185,8 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<SearchHistoryParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
+        metrics().record_search();
         let req = SearchRequest {
             hist: Some(params.hist),
             projects: self.to_projects(&params.project),
@@ -169,7 +195,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.search(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -181,6 +210,8 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<AdvancedSearchParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
+        metrics().record_search();
         let sort = params.sort.as_deref().and_then(|s| match s {
             s if s == SortOrder::Relevancy.as_query_value() => Some(SortOrder::Relevancy),
             s if s == SortOrder::FullPath.as_query_value() => Some(SortOrder::FullPath),
@@ -203,7 +234,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.search(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -225,7 +259,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.suggest(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -237,13 +274,17 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetFileContentParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self
             .service
             .get_file_content(&params.project, &params.path)
             .await
         {
             Ok(file) => Self::text_result(file.text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -255,9 +296,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetFileDefinitionsParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.get_file_definitions(&params.path).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -269,9 +314,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetFileGenreParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.get_file_genre(&params.path).await {
             Ok(genre) => Self::text_result(format!("{genre:?}")),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -281,9 +330,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<ListDirectoryParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.list_directory(&params.path).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -293,9 +346,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(_params): Parameters<NoParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.list_indexed_projects().await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -304,7 +361,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
     async fn list_all_projects(&self, Parameters(_params): Parameters<NoParams>) -> CallToolResult {
         match self.service.list_all_projects().await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -314,6 +374,7 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetHistoryParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         let req = HistoryRequest {
             path: params.path,
             start: params.start,
@@ -322,7 +383,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         };
         match self.service.get_history(req).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -334,9 +398,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetAnnotationParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.get_annotation(&params.path).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -345,7 +413,10 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
     async fn list_groups(&self, Parameters(_params): Parameters<NoParams>) -> CallToolResult {
         match self.service.list_groups().await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -355,9 +426,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetGroupProjectsParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.get_group_projects(&params.group).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -367,10 +442,14 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<ListProjectFilesParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         let path = format!("/{}/{}", params.project, params.path.trim_start_matches('/'));
         match self.service.list_directory(&path).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -380,9 +459,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<ListProjectReposParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.list_project_repos(&params.project).await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -392,13 +475,17 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetProjectPropertyParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self
             .service
             .get_project_property(&params.project, &params.name)
             .await
         {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -410,13 +497,17 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(params): Parameters<GetRepoPropertyParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self
             .service
             .get_repo_property(&params.field, &params.repository)
             .await
         {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -426,9 +517,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(_params): Parameters<NoParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.get_suggest_config().await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -438,9 +533,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
         &self,
         Parameters(_params): Parameters<NoParams>,
     ) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.get_opengrok_version().await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
@@ -449,16 +548,23 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
     async fn get_index_time(&self, Parameters(_params): Parameters<NoParams>) -> CallToolResult {
         match self.service.get_index_time().await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 
     // 25. health_check
     #[tool(description = "Check whether the OpenGrok web application is alive and responding.")]
     async fn health_check(&self, Parameters(_params): Parameters<NoParams>) -> CallToolResult {
+        metrics().record_tool_call();
         match self.service.health_check().await {
             Ok(text) => Self::text_result(text),
-            Err(e) => Self::error_result(e.to_string()),
+            Err(e) => {
+                metrics().record_tool_error();
+                Self::error_result(e.to_string())
+            }
         }
     }
 }
