@@ -116,14 +116,15 @@ See `config/config.example.toml` for all options. Key sections:
 | `[service]` | HTML stripping, result caps (`max_hits_per_file`, `default_max_results`) |
 | `[cache]` | In-memory TTL LRU cache (`Mutex<LruCache>`) for repeated searches |
 | `[rate_limit]` | Token-bucket rate limiter (GCRA via `governor`, protects OpenGrok) |
-| `[transport]` | Transport mode (`both` by default), bind address (`127.0.0.1:8080`), `allowed_hosts`, `MCP_TOKEN` auth |
+| `[transport]` | Transport mode (`both` by default), bind address (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
 | `[log]` | Log level (`RUST_LOG` overrides) |
 
 #### MCP server-side token auth
 
-When `MCP_TOKEN` is set, the HTTP transport requires `Authorization: Bearer <token>` on every
-incoming MCP request. Token comparison is constant-time. This is **inbound** auth for the MCP
-server — separate from the OpenGrok **outbound** auth configured in `[opengrok.auth]`.
+When `mcp_auth_token` is non-empty (set in config.toml or via `MCP_AUTH_TOKEN` env var),
+the HTTP transport requires `Authorization: Bearer <token>` on every incoming MCP request.
+Token comparison uses `subtle::ConstantTimeEq` (timing-safe). This is **inbound** auth for
+the MCP server — separate from the OpenGrok **outbound** auth configured in `[opengrok.auth]`.
 
 #### Streamable HTTP & DNS rebinding protection
 
@@ -277,14 +278,16 @@ docker compose up -d
 | `[service]` | Очистка HTML, лимиты результатов (`max_hits_per_file`, `default_max_results`) |
 | `[cache]` | TTL LRU-кэш в памяти (`Mutex<LruCache>`) для повторных поисков |
 | `[rate_limit]` | Ограничитель частоты token bucket (GCRA через `governor`, защищает OpenGrok) |
-| `[transport]` | Режим транспорта (`both` по умолчанию), адрес (`127.0.0.1:8080`), `allowed_hosts`, аутентификация `MCP_TOKEN` |
+| `[transport]` | Режим транспорта (`both` по умолчанию), адрес (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
 | `[log]` | Уровень логирования (переопределяется `RUST_LOG`) |
 
 #### Токен-аутентификация MCP-сервера
 
-При заданной `MCP_TOKEN` HTTP-транспорт требует заголовок `Authorization: Bearer <токен>` на
-каждом входящем MCP-запросе. Сравнение токена — constant-time. Это **входящая** аутентификация
-MCP-сервера — отдельно от **исходящей** аутентификации к OpenGrok в `[opengrok.auth]`.
+Если `mcp_auth_token` не пуст (задан в config.toml или через `MCP_AUTH_TOKEN`),
+HTTP-транспорт требует заголовок `Authorization: Bearer <токен>` на каждом входящем
+MCP-запросе. Сравнение токена — `subtle::ConstantTimeEq` (timing-safe). Это **входящая**
+аутентификация MCP-сервера — отдельно от **исходящей** аутентификации к OpenGrok
+в `[opengrok.auth]`.
 
 #### Streamable HTTP и защита от DNS rebinding
 

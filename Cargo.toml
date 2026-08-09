@@ -22,6 +22,7 @@ lru = "0.18"
 rustls = "0.23"
 rustls-native-certs = "0.8"
 rustls-pemfile = "2"
+subtle = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time", "signal"] }
 chrono = "0.4"
 

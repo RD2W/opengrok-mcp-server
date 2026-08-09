@@ -29,6 +29,7 @@ schemars.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
 clap = { version = "4", features = ["derive"] }
+subtle.workspace = true
 
 [dev-dependencies]
 wiremock = { workspace = true }

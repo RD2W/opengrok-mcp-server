@@ -23,7 +23,7 @@ const ENV_OPENGROK_VERIFY_SSL: &str = "OPENGROK_VERIFY_SSL";
 const ENV_RUST_LOG: &str = "RUST_LOG";
 const ENV_MCP_LOG_LEVEL: &str = "MCP_LOG_LEVEL";
 const ENV_OPENGROK_TOKEN: &str = "OPENGROK_TOKEN";
-const ENV_MCP_TOKEN: &str = "MCP_TOKEN";
+const ENV_MCP_AUTH_TOKEN: &str = "MCP_AUTH_TOKEN";
 
 pub const DEFAULT_CONFIG_PATH: &str = "config/config.toml";
 const SEARCH_PATH_FALLBACK_1: &str = "./config/config.toml";
@@ -238,8 +238,8 @@ impl Config {
                 .collect();
         }
         // MCP server-side token auth (inbound, not OpenGrok API auth)
-        if let Ok(token) = std::env::var(&self.transport.mcp_token_env) {
-            self.transport.mcp_token = Some(token);
+        if let Ok(val) = std::env::var(ENV_MCP_AUTH_TOKEN) {
+            self.transport.mcp_auth_token = val;
         }
 
         // --- Log ------------------------------------------------------------
@@ -429,18 +429,12 @@ pub struct TransportConfig {
     /// Allowed hostnames for Streamable HTTP Host header validation.
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
-    /// Env variable name for the MCP server-side bearer token.
-    /// If set, the HTTP transport requires `Authorization: Bearer <token>`
-    /// on every MCP request. Read from `MCP_TOKEN` by default.
-    #[serde(default = "default_mcp_token_env")]
-    pub mcp_token_env: String,
-    /// The actual MCP token value (populated from env at load time).
-    #[serde(skip)]
-    pub mcp_token: Option<String>,
-}
-
-fn default_mcp_token_env() -> String {
-    ENV_MCP_TOKEN.into()
+    /// Bearer token for MCP endpoint authentication.
+    /// When non-empty, clients must include `Authorization: Bearer <token>`
+    /// in every request. Token auth is disabled when this is empty.
+    /// Environment: MCP_AUTH_TOKEN.
+    #[serde(default)]
+    pub mcp_auth_token: String,
 }
 
 impl Default for TransportConfig {
@@ -453,8 +447,7 @@ impl Default for TransportConfig {
             ready_path: "/readyz".into(),
             metrics_path: "/metrics".into(),
             allowed_hosts: vec![],
-            mcp_token_env: default_mcp_token_env(),
-            mcp_token: None,
+            mcp_auth_token: String::new(),
         }
     }
 }

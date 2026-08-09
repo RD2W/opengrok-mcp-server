@@ -82,26 +82,27 @@ opengrok-mcp --version
 | `ready_path` | `MCP_READY_PATH` | `"/readyz"` | Эндпоинт готовности |
 | `metrics_path` | `MCP_METRICS_PATH` | `"/metrics"` | Эндпоинт метрик Prometheus |
 | `allowed_hosts` | `MCP_ALLOWED_HOSTS` | `[]` | Разрешённые значения заголовка Host (через запятую в env; защита от DNS rebinding) |
-| `mcp_token_env` | — | `"MCP_TOKEN"` | Имя переменной окружения для Bearer-токена MCP-сервера (защита HTTP-транспорта) |
+| `mcp_auth_token` | `MCP_AUTH_TOKEN` | `""` | Bearer-токен для аутентификации MCP-эндпоинта (пустая строка = отключено). Можно задать в TOML или через env. |
 
 #### Аутентификация MCP-сервера (входящие запросы)
 
-Когда в окружении задана переменная `mcp_token_env` (по умолчанию: `MCP_TOKEN`),
-каждый входящий запрос к MCP-эндпоинту должен содержать заголовок:
+Задайте `mcp_auth_token` в `config.toml` или через переменную окружения `MCP_AUTH_TOKEN`.
+Если значение не пустое, каждый входящий запрос к MCP-эндпоинту должен содержать заголовок:
 
 ```
 Authorization: Bearer <токен>
 ```
 
 Запросы без токена получают **HTTP 401 Unauthorized**. Сравнение токена —
-constant-time (защита от timing side-channel атак). Влияет только на HTTP-транспорт,
-stdio-транспорт не затрагивается.
+`subtle::ConstantTimeEq` (timing-safe). Влияет только на HTTP-транспорт,
+stdio-транспорт не затрагивается. Пустая строка отключает аутентификацию.
 
-Включение:
-
-```bash
-export MCP_TOKEN="your-shared-secret"
+```toml
+[transport]
+mcp_auth_token = "shared-secret-12345"
 ```
+
+Или через env: `export MCP_AUTH_TOKEN=shared-secret-12345`
 
 > Это **входящая** аутентификация самого MCP-сервера — в отличие от секции
 > `[opengrok.auth]`, которая настраивает **исходящую** аутентификацию к OpenGrok.

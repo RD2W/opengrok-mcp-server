@@ -142,11 +142,11 @@ metrics_path = "/metrics"
 # Empty list — accepts requests from any host.
 # allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp:8004"]
 
-# Env var name for the MCP server-side bearer token (protects HTTP transport).
-# If set in env, EVERY request to the MCP endpoint MUST include:
-#   Authorization: Bearer <token>
-# Default: "MCP_TOKEN" (value read from env at startup).
-# mcp_token_env = "MCP_TOKEN"
+# Bearer token for MCP endpoint authentication. When non-empty, clients must
+# include `Authorization: Bearer <token>` in every request. Empty = disabled.
+# Can be set directly here or overridden via environment variable.
+# Environment: MCP_AUTH_TOKEN.
+# mcp_auth_token = ""
 
 # ===========================================================================
 # [log] — Logging

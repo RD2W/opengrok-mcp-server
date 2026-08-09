@@ -81,26 +81,27 @@ Credentials are never stored in the config file — only the env var names.
 | `ready_path` | `MCP_READY_PATH` | `"/readyz"` | Readiness endpoint |
 | `metrics_path` | `MCP_METRICS_PATH` | `"/metrics"` | Prometheus metrics endpoint |
 | `allowed_hosts` | `MCP_ALLOWED_HOSTS` | `[]` | Allowed Host header values (comma-separated in env; DNS rebinding protection) |
-| `mcp_token_env` | — | `"MCP_TOKEN"` | Env var name for MCP server-side Bearer token (protects HTTP transport) |
+| `mcp_auth_token` | `MCP_AUTH_TOKEN` | `""` | Bearer token for MCP endpoint auth (empty = disabled). Can be set in TOML or via env. |
 
 #### MCP server-side token auth
 
-When `mcp_token_env` (default: `MCP_TOKEN`) is set in the environment, every
-incoming request to the MCP endpoint must include:
+Set `mcp_auth_token` in `config.toml` or the `MCP_AUTH_TOKEN` environment variable.
+When non-empty, every incoming request to the MCP endpoint must include:
 
 ```
 Authorization: Bearer <token>
 ```
 
 Requests without a matching token receive **HTTP 401 Unauthorized**. Token
-comparison uses constant-time comparison (timing side-channel protection).
-This only affects HTTP transport — stdio transport is unaffected.
+comparison uses `subtle::ConstantTimeEq` (timing-safe). This only affects
+HTTP transport — stdio transport is unaffected. Empty token disables auth.
 
-To enable:
-
-```bash
-export MCP_TOKEN="your-shared-secret"
+```toml
+[transport]
+mcp_auth_token = "shared-secret-12345"
 ```
+
+Or via env: `export MCP_AUTH_TOKEN=shared-secret-12345`
 
 > This is **inbound** auth for the MCP server itself — separate from the
 > `[opengrok.auth]` section which configures **outbound** auth to OpenGrok.
