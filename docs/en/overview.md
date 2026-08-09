@@ -95,7 +95,7 @@ This prevents DNS rebinding attacks when the server is exposed on a network.
 
 ### Docker
 
-Multi-stage build producing a **~35 MB** Alpine-based image. Docker Compose config
+Multi-stage build producing a UPX-compressed **~23 MB** Alpine-based image. Docker Compose config
 for local development and remote deployment.
 
 ---

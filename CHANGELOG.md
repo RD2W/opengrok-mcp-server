@@ -6,6 +6,34 @@ follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-08-09
+
+### Changed
+
+- **rmcp upgraded to 3.1.2** (was 3.0.1) — MCP protocol conformance fixes:
+  stateless request routing for 2026-07-28, MRTR round-trip support,
+  per-request protocol metadata validation, cancel-safe receive.
+
+### Fixed
+
+- **HTTP transport: disabled legacy session mode** via
+  `StreamableHttpServerConfig::with_legacy_session_mode(false)`.
+  rmcp 3.1.x requires this when using `NeverSessionManager` —
+  otherwise all requests are routed through the legacy session
+  creation path, which `NeverSessionManager` rejects.
+
+### Added
+
+- **Docker: UPX binary compression** for smaller image size (Dockerfile + CI release workflow).
+- **CI: install-upx composite action** and UPX step in binary release builds.
+
+### Changed
+
+- **Updated 28 dependencies** to latest semver-compatible versions
+  (base64, clap, thiserror, zerocopy, async-trait, aws-lc-rs, etc.).
+
+## [1.1.0] — 2026-07-31
+
 ### Changed
 
 - **rmcp upgraded to 3.0** (was 2.2) — MCP 2026-07-28 protocol support:

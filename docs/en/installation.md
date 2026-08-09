@@ -138,8 +138,8 @@ docker compose up -d
 
 ### Image size
 
-The multi-stage Docker build produces an Alpine-based image of approximately
-**35 MB** — small enough for easy transfer over slow connections.
+The multi-stage Docker build produces a UPX-compressed Alpine-based image of approximately
+**23 MB** — small enough for easy transfer over slow connections.
 
 ---
 
