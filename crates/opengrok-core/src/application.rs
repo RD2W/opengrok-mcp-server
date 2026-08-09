@@ -268,15 +268,6 @@ impl<R: OpengrokRepository> OpengrokService<R> {
         Ok(self.formatter.format_simple_list("project", &projects))
     }
 
-    /// Lists files in a project from the index.
-    pub async fn list_project_files(&self, project: &str) -> Result<String, DomainError> {
-        if let Some(ref rl) = self.rate_limiter {
-            rl.acquire().await?;
-        }
-        let files = self.repo.list_project_files(project).await?;
-        Ok(self.formatter.format_simple_list("file", &files))
-    }
-
     /// Lists repository paths for a project.
     pub async fn list_project_repos(&self, project: &str) -> Result<String, DomainError> {
         if let Some(ref rl) = self.rate_limiter {
@@ -600,18 +591,6 @@ mod tests {
         let result = svc.get_group_projects("mygroup").await.unwrap();
         assert!(result.contains("Found 2 project(s)"));
         assert!(result.contains("p1"));
-    }
-
-    // -- New endpoints: projects extra ---------------------------------------
-
-    #[tokio::test]
-    async fn list_project_files_returns_formatted() {
-        let (svc, repo) = test_service();
-        repo.push_project_files(Ok(vec!["src/a.rs".into(), "src/b.rs".into()]));
-
-        let result = svc.list_project_files("proj").await.unwrap();
-        assert!(result.contains("Found 2 file(s)"));
-        assert!(result.contains("src/a.rs"));
     }
 
     #[tokio::test]

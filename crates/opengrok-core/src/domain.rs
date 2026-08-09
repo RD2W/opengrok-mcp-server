@@ -577,14 +577,6 @@ pub(crate) struct SuggestResponseDto {
     pub suggestions: Vec<Suggestion>,
 }
 
-/// Wrapper DTO for the `projects/{p}/files` response.
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(crate) struct ListProjectFilesResponseDto {
-    #[serde(default)]
-    pub files: Vec<String>,
-}
-
 // ---------------------------------------------------------------------------
 // Suggester configuration
 // ---------------------------------------------------------------------------
@@ -724,9 +716,6 @@ pub trait OpengrokRepository: Send + Sync {
     /// Get all projects (including subgroups) within a group.
     async fn get_group_projects(&self, group: &str) -> Result<Vec<String>, DomainError>;
 
-    /// List files within a project from the index.
-    async fn list_project_files(&self, project: &str) -> Result<Vec<String>, DomainError>;
-
     /// List repository paths for a project.
     async fn list_project_repos(&self, project: &str) -> Result<Vec<String>, DomainError>;
 
@@ -785,7 +774,6 @@ pub struct MockOpengrokRepository {
     // New: groups, projects extra, repos, system, suggest config, index
     groups_result: std::sync::Mutex<Option<Vec<String>>>,
     group_projects_results: std::sync::Mutex<Vec<Result<Vec<String>, DomainError>>>,
-    project_files_results: std::sync::Mutex<Vec<Result<Vec<String>, DomainError>>>,
     project_repos_results: std::sync::Mutex<Vec<Result<Vec<String>, DomainError>>>,
     project_property_results: std::sync::Mutex<Vec<Result<String, DomainError>>>,
     repo_property_results: std::sync::Mutex<Vec<Result<String, DomainError>>>,
@@ -820,7 +808,6 @@ impl MockOpengrokRepository {
             annotation_results: std::sync::Mutex::new(Vec::new()),
             groups_result: std::sync::Mutex::new(None),
             group_projects_results: std::sync::Mutex::new(Vec::new()),
-            project_files_results: std::sync::Mutex::new(Vec::new()),
             project_repos_results: std::sync::Mutex::new(Vec::new()),
             project_property_results: std::sync::Mutex::new(Vec::new()),
             repo_property_results: std::sync::Mutex::new(Vec::new()),
@@ -919,10 +906,6 @@ impl MockOpengrokRepository {
     }
 
     /// Push a project files result.
-    pub fn push_project_files(&self, result: Result<Vec<String>, DomainError>) {
-        self.project_files_results.lock().unwrap().push(result);
-    }
-
     /// Push a project repos result.
     pub fn push_project_repos(&self, result: Result<Vec<String>, DomainError>) {
         self.project_repos_results.lock().unwrap().push(result);
@@ -1059,14 +1042,6 @@ impl OpengrokRepository for MockOpengrokRepository {
 
     async fn get_group_projects(&self, _group: &str) -> Result<Vec<String>, DomainError> {
         self.group_projects_results
-            .lock()
-            .unwrap()
-            .pop()
-            .unwrap_or(Err(DomainError::NotImplemented))
-    }
-
-    async fn list_project_files(&self, _project: &str) -> Result<Vec<String>, DomainError> {
-        self.project_files_results
             .lock()
             .unwrap()
             .pop()

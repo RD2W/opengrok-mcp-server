@@ -387,12 +387,6 @@ impl OpengrokRepository for OpengrokClient {
         self.get_json(&path, &[]).await
     }
 
-    async fn list_project_files(&self, project: &str) -> Result<Vec<String>, DomainError> {
-        let path = format!("projects/{project}/files");
-        let response: ListProjectFilesResponseDto = self.get_json(&path, &[]).await?;
-        Ok(response.files)
-    }
-
     async fn list_project_repos(&self, project: &str) -> Result<Vec<String>, DomainError> {
         let path = format!("projects/{project}/repositories");
         self.get_json(&path, &[]).await
@@ -1063,55 +1057,6 @@ mod tests {
         let client = test_client(addr.port());
         let projects = client.get_group_projects("mygroup").await.unwrap();
         assert_eq!(projects, vec!["proj1", "proj2"]);
-    }
-
-    // -- New endpoints: projects extra --------------------------------------
-
-    #[tokio::test]
-    async fn list_project_files_returns_array() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-
-        tokio::spawn(async move {
-            let (mut stream, _) = listener.accept().await.unwrap();
-            let (first, _headers) = read_request(&mut stream).await;
-            assert!(first.contains("GET /api/v1/projects/myproj/files"));
-
-            let body = r#"{"files":["src/main.rs","src/lib.rs"]}"#;
-            let resp = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
-                body.len()
-            );
-            stream.write_all(resp.as_bytes()).await.unwrap();
-            stream.shutdown().await.unwrap();
-        });
-
-        let client = test_client(addr.port());
-        let files = client.list_project_files("myproj").await.unwrap();
-        assert_eq!(files, vec!["src/main.rs", "src/lib.rs"]);
-    }
-
-    #[tokio::test]
-    async fn list_project_files_empty_response() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-
-        tokio::spawn(async move {
-            let (mut stream, _) = listener.accept().await.unwrap();
-            let (_first, _headers) = read_request(&mut stream).await;
-
-            let body = r#"{"files":[],"endDocument":-1}"#;
-            let resp = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
-                body.len()
-            );
-            stream.write_all(resp.as_bytes()).await.unwrap();
-            stream.shutdown().await.unwrap();
-        });
-
-        let client = test_client(addr.port());
-        let files = client.list_project_files("myproj").await.unwrap();
-        assert!(files.is_empty());
     }
 
     #[tokio::test]

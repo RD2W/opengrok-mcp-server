@@ -362,12 +362,13 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
     }
 
     // 18. list_project_files
-    #[tool(description = "List all files in a project from the index.")]
+    #[tool(description = "List the contents of a directory within a project. Uses the directory listing API (not recursive file tree) for scalability.")]
     async fn list_project_files(
         &self,
         Parameters(params): Parameters<ListProjectFilesParams>,
     ) -> CallToolResult {
-        match self.service.list_project_files(&params.project).await {
+        let path = format!("/{}/{}", params.project, params.path.trim_start_matches('/'));
+        match self.service.list_directory(&path).await {
             Ok(text) => Self::text_result(text),
             Err(e) => Self::error_result(e.to_string()),
         }
