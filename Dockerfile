@@ -1,8 +1,11 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Maxim Krutovercev (RD2W) <mkrutovercev@yandex.ru>
+
 # Multi-stage Docker build for opengrok-mcp
 
 # Stage 1: Build
 FROM rust:1.97.1-alpine3.24 AS builder
-RUN apk add --no-cache musl-dev pkgconf
+RUN apk add --no-cache musl-dev pkgconf upx
 WORKDIR /build
 
 ARG GIT_HASH
@@ -22,7 +25,8 @@ RUN mkdir -p crates/opengrok-core/src crates/opengrok-mcp/src && \
     rm -rf target/release/.fingerprint/opengrok-*
 COPY crates/opengrok-core/src crates/opengrok-core/src
 COPY crates/opengrok-mcp/src crates/opengrok-mcp/src
-RUN cargo build --release
+RUN cargo build --release && \
+    upx --best /build/target/release/opengrok-mcp
 
 # Stage 2: Runtime
 FROM alpine:3.24
