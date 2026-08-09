@@ -5,7 +5,12 @@
 
 use std::sync::Arc;
 
-use axum::{Router, routing::get};
+use axum::Router;
+use axum::extract::Request;
+use axum::http::StatusCode;
+use axum::middleware::Next;
+use axum::response::Response;
+use axum::routing::get;
 use opengrok_core::application::OpengrokService;
 use opengrok_core::domain::OpengrokRepository;
 use rmcp::transport::streamable_http_server::{
@@ -15,6 +20,55 @@ use rmcp::transport::streamable_http_server::{
 use crate::config::Config;
 use crate::health::{health_handler, metrics_handler, ready_handler};
 use crate::mcp::OpengrokServer;
+
+/// MCP token auth middleware: validates `Authorization: Bearer <token>`.
+///
+/// When `mcp_token` is `Some`, every request to the MCP path is checked.
+/// Requests without a matching `Authorization: Bearer` header receive
+/// HTTP 401 with a plain-text body.  Comparison uses a constant-time
+/// helper to eliminate timing side-channels.
+///
+/// When `mcp_token` is `None`, all requests pass through (no auth).
+async fn mcp_token_auth(
+    mcp_token: Option<String>,
+    req: Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    let expected = match mcp_token {
+        Some(t) => t,
+        None => return Ok(next.run(req).await),
+    };
+
+    let auth_header = req
+        .headers()
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "));
+
+    match auth_header {
+        Some(provided) if constant_time_eq(provided, &expected) => Ok(next.run(req).await),
+        _ => {
+            let body = axum::body::Body::from("Unauthorized\n");
+            Ok(Response::builder()
+                .status(StatusCode::UNAUTHORIZED)
+                .body(body)
+                .unwrap())
+        }
+    }
+}
+
+fn constant_time_eq(a: &str, b: &str) -> bool {
+    let a = a.as_bytes();
+    let b = b.as_bytes();
+    if a.len() != b.len() {
+        return false;
+    }
+    let mut acc: u8 = 0;
+    for i in 0..a.len() {
+        acc |= a[i] ^ b[i];
+    }
+    acc == 0
+}
 
 /// Runs the MCP server over Streamable HTTP with health/metrics endpoints.
 pub async fn run_http<R: OpengrokRepository + Send + Sync + 'static>(
@@ -47,12 +101,22 @@ pub async fn run_http<R: OpengrokRepository + Send + Sync + 'static>(
     let metrics_path = config.transport.metrics_path.clone();
     let http_path = config.transport.http_path.clone();
     let bind_addr = config.transport.bind_addr.clone();
+    let mcp_token = config.transport.mcp_token.clone();
 
+    let mcp_token_for_middleware = mcp_token.clone();
     let app = Router::new()
         .nest_service(&http_path, mcp_service)
         .route(&health_path, get(health_handler))
         .route(&ready_path, get(ready_handler))
-        .route(&metrics_path, get(metrics_handler));
+        .route(&metrics_path, get(metrics_handler))
+        .layer(axum::middleware::from_fn(move |req, next| {
+            let token = mcp_token_for_middleware.clone();
+            async move { mcp_token_auth(token, req, next).await }
+        }));
+
+    if let Some(_t) = &mcp_token {
+        tracing::info!("MCP token auth enabled");
+    }
 
     tracing::info!(%bind_addr, %http_path, "starting Streamable HTTP transport");
 
@@ -64,4 +128,116 @@ pub async fn run_http<R: OpengrokRepository + Send + Sync + 'static>(
         .await?;
 
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tower::ServiceExt;
+
+    #[test]
+    fn constant_time_eq_matches() {
+        assert!(constant_time_eq("abc", "abc"));
+        assert!(constant_time_eq("", ""));
+    }
+
+    #[test]
+    fn constant_time_eq_mismatches() {
+        assert!(!constant_time_eq("abc", "abd"));
+        assert!(!constant_time_eq("abc", "ab"));
+        assert!(!constant_time_eq("abc", "abcd"));
+        assert!(!constant_time_eq("abc", "ABC"));
+    }
+
+    #[tokio::test]
+    async fn no_token_auth_passes() {
+        use axum::body::Body;
+        let app =
+            Router::new()
+                .route("/test", get(|| async { "ok" }))
+                .layer(axum::middleware::from_fn(move |req, next| {
+                    let token: Option<String> = None;
+                    async move { mcp_token_auth(token, req, next).await }
+                }));
+
+        let response = app
+            .oneshot(Request::builder().uri("/test").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn correct_token_passes() {
+        use axum::body::Body;
+        let app =
+            Router::new()
+                .route("/test", get(|| async { "ok" }))
+                .layer(axum::middleware::from_fn(move |req, next| {
+                    let token = Some("secret".to_string());
+                    async move { mcp_token_auth(token, req, next).await }
+                }));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/test")
+                    .header("Authorization", "Bearer secret")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn wrong_token_returns_401() {
+        use axum::body::Body;
+        let app =
+            Router::new()
+                .route("/test", get(|| async { "ok" }))
+                .layer(axum::middleware::from_fn(move |req, next| {
+                    let token = Some("secret".to_string());
+                    async move { mcp_token_auth(token, req, next).await }
+                }));
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/test")
+                    .header("Authorization", "Bearer wrong")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn missing_header_returns_401() {
+        use axum::body::Body;
+        let app =
+            Router::new()
+                .route("/test", get(|| async { "ok" }))
+                .layer(axum::middleware::from_fn(move |req, next| {
+                    let token = Some("secret".to_string());
+                    async move { mcp_token_auth(token, req, next).await }
+                }));
+
+        let response = app
+            .oneshot(Request::builder().uri("/test").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
 }

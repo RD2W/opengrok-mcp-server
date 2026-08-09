@@ -21,6 +21,7 @@ const ENV_SSL_CERT_DIR: &str = "SSL_CERT_DIR";
 const ENV_OPENGROK_VERIFY_SSL: &str = "OPENGROK_VERIFY_SSL";
 const ENV_RUST_LOG: &str = "RUST_LOG";
 const ENV_OPENGROK_TOKEN: &str = "OPENGROK_TOKEN";
+const ENV_MCP_TOKEN: &str = "MCP_TOKEN";
 
 pub const DEFAULT_CONFIG_PATH: &str = "config/config.toml";
 const SEARCH_PATH_FALLBACK_1: &str = "./config/config.toml";
@@ -150,6 +151,11 @@ impl Config {
         // Log level
         if let Ok(val) = std::env::var(ENV_RUST_LOG) {
             self.log.level = val;
+        }
+
+        // MCP server-side token auth (inbound, not OpenGrok API auth)
+        if let Ok(token) = std::env::var(&self.transport.mcp_token_env) {
+            self.transport.mcp_token = Some(token);
         }
     }
 
@@ -329,18 +335,32 @@ pub struct TransportConfig {
     /// Allowed hostnames for Streamable HTTP Host header validation.
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
+    /// Env variable name for the MCP server-side bearer token.
+    /// If set, the HTTP transport requires `Authorization: Bearer <token>`
+    /// on every MCP request. Read from `MCP_TOKEN` by default.
+    #[serde(default = "default_mcp_token_env")]
+    pub mcp_token_env: String,
+    /// The actual MCP token value (populated from env at load time).
+    #[serde(skip)]
+    pub mcp_token: Option<String>,
+}
+
+fn default_mcp_token_env() -> String {
+    ENV_MCP_TOKEN.into()
 }
 
 impl Default for TransportConfig {
     fn default() -> Self {
         Self {
             mode: "both".into(),
-            bind_addr: "0.0.0.0:8080".into(),
+            bind_addr: "127.0.0.1:8080".into(),
             http_path: "/mcp".into(),
             health_path: "/healthz".into(),
             ready_path: "/readyz".into(),
             metrics_path: "/metrics".into(),
             allowed_hosts: vec![],
+            mcp_token_env: default_mcp_token_env(),
+            mcp_token: None,
         }
     }
 }
@@ -457,7 +477,7 @@ unknown_field = 42
     fn transport_defaults() {
         let config = TransportConfig::default();
         assert_eq!(config.mode, "both");
-        assert_eq!(config.bind_addr, "0.0.0.0:8080");
+        assert_eq!(config.bind_addr, "127.0.0.1:8080");
         assert_eq!(config.http_path, "/mcp");
         assert!(config.allowed_hosts.is_empty());
     }
