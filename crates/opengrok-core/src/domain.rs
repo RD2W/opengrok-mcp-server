@@ -569,6 +569,22 @@ pub struct Suggestion {
     pub score: Option<i32>,
 }
 
+/// Wrapper DTO for the `/suggest` response (object with `suggestions` key).
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SuggestResponseDto {
+    #[serde(default)]
+    pub suggestions: Vec<Suggestion>,
+}
+
+/// Wrapper DTO for the `projects/{p}/files` response.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ListProjectFilesResponseDto {
+    #[serde(default)]
+    pub files: Vec<String>,
+}
+
 // ---------------------------------------------------------------------------
 // Suggester configuration
 // ---------------------------------------------------------------------------
