@@ -50,9 +50,11 @@ jobs:
         with:
           targets: aarch64-unknown-linux-gnu
       - uses: Swatinem/rust-cache@v2
+      - uses: ./.github/actions/install-upx
       - name: Install cross
         run: cargo install cross --locked
       - run: cross build -p opengrok-mcp --release --locked --target aarch64-unknown-linux-gnu
+      - run: upx --best target/aarch64-unknown-linux-gnu/release/${{ env.BINARY }}
       - uses: actions/upload-artifact@v7
         with:
           name: linux-aarch64
