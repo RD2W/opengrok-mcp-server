@@ -42,6 +42,7 @@ const HEADER_ACCEPT: &str = "Accept";
 const HEADER_OCTET_STREAM: &str = "application/octet-stream";
 
 const MAX_BODY_TRUNCATION: usize = 500;
+const MAX_RESPONSE_BYTES: u64 = 50 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Auth configuration
@@ -170,6 +171,18 @@ impl OpengrokClient {
         query: &[(&str, &str)],
     ) -> Result<T, DomainError> {
         let response = self.get(path, query).await?;
+
+        if let Some(len) = response.content_length()
+            && len > MAX_RESPONSE_BYTES
+        {
+            return Err(DomainError::Decode(serde_json::Error::io(
+                io::Error::other(format!(
+                    "response too large: {len} bytes (limit: {MAX_RESPONSE_BYTES} bytes). \
+                     Try narrowing the query with a more specific project or path."
+                )),
+            )));
+        }
+
         let body = response.text().await.map_err(|e| {
             DomainError::Decode(serde_json::Error::io(io::Error::other(format!(
                 "failed to read response body: {e}"
