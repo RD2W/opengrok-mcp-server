@@ -58,7 +58,7 @@ export OPENGROK_PASSWORD="пароль"
 cargo run --release
 ```
 
-Сервер запускается в режиме stdio по умолчанию и готов к подключению MCP-клиентов.
+Сервер запускается в режиме `both` по умолчанию (stdio + HTTP на `127.0.0.1:8080`).
 
 ---
 
@@ -67,9 +67,10 @@ cargo run --release
 ### Локальная разработка
 
 ```bash
-# Задайте учётные данные в config/.env:
+# Задайте учётные данные в config/.env (см. config/.env.example):
 #   OPENGROK_TOKEN=ваш-токен
 #   OPENGROK_URL=https://opengrok.example.com
+#   MCP_TOKEN=shared-secret        # опционально, для защиты MCP-сервера
 
 docker compose up -d
 ```
@@ -85,7 +86,7 @@ docker compose up -d
 docker pull rd2w/opengrok-mcp:latest
 
 # Или конкретной версии
-docker pull rd2w/opengrok-mcp:v0.1.0
+docker pull rd2w/opengrok-mcp:v1.1.1
 
 # Используйте docker-compose файл для готовых образов
 docker compose -f docker-compose.hub.yml up -d
@@ -107,7 +108,7 @@ docker compose -f docker-compose.hub.yml up -d
 #    (загрузка базовых образов, crates Rust, компиляция — всё вкомпилировано)
 docker build -t opengrok-mcp:latest .
 
-# 2. Экспорт в один переносимый архив (~35 МБ)
+# 2. Экспорт в один переносимый архив (~23 МБ)
 docker save opengrok-mcp:latest | gzip > opengrok-mcp.tar.gz
 
 # 3. Перенос на изолированный хост (USB-накопитель, scp на jump host и т.д.)
@@ -157,6 +158,8 @@ docker compose up -d
    [opengrok]
    ca_cert = "./config/certs/your-ca.crt"
    ```
+
+   Пользовательский CA загружается **в дополнение** к системному trust store.
 
 3. Или используйте переменные окружения:
    ```bash

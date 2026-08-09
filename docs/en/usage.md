@@ -28,65 +28,88 @@ the annotated template. Environment variables override specific fields (listed b
 ### `[opengrok]` — connection
 
 | Field | Env var | Default | Description |
-|---|---|---|---|
+|---|---|---|---|---|
 | `base_url` | `OPENGROK_URL` | `""` | **Required.** OpenGrok base URL (e.g. `https://opengrok.example.com`) |
-| `timeout_secs` | — | `60` | HTTP request timeout — AOSP searches can be slow |
-| `ca_cert` | `OPENGROK_CA_CERT` / `SSL_CERT_FILE` | `"./config/certs/russian_trusted_root_ca_pem.crt"` | Custom CA PEM path |
-| `ca_cert_dir` | `SSL_CERT_DIR` | — | Directory of CA certs |
-| `verify_ssl` | `OPENGROK_VERIFY_SSL=false` | `true` | Enable/disable TLS verification |
+| `timeout_secs` | `OPENGROK_TIMEOUT_SECS` | `30` | HTTP request timeout in seconds (max response body: 50 MB) |
+| `ca_cert` | `OPENGROK_CA_CERT`, `SSL_CERT_FILE` | — | Custom CA certificate PEM file path (loaded in addition to system trust store; `OPENGROK_CA_CERT` takes priority) |
+| `ca_cert_dir` | `OPENGROK_CA_CERT_DIR`, `SSL_CERT_DIR` | — | Directory of CA certificate files (.crt, .pem); `OPENGROK_CA_CERT_DIR` takes priority |
+| `verify_ssl` | `OPENGROK_VERIFY_SSL` | `true` | Enable/disable TLS certificate verification (use `false`/`0`/`no` to disable) |
 
 ### `[opengrok.auth]` — authentication
 
-| Field | Description |
-|---|---|
-| `mode` | `"token"`, `"basic"`, or `"none"` |
-| `token_env` | Env var name for the Bearer token (default: `OPENGROK_TOKEN`) |
-| `username_env` | Env var name for Basic auth username (default: `OPENGROK_USERNAME`) |
-| `password_env` | Env var name for Basic auth password (default: `OPENGROK_PASSWORD`) |
+| Field | Default | Description |
+|---|---|---|
+| `mode` | `"none"` | `"token"`, `"basic"`, or `"none"` |
+| `token_env` | `"OPENGROK_TOKEN"` | Env var name for the Bearer token (only for `mode = "token"`) |
+| `username_env` | — | Env var name for Basic auth username (only for `mode = "basic"`; **must be set**) |
+| `password_env` | — | Env var name for Basic auth password (only for `mode = "basic"`; empty if not set) |
 
 Credentials are never stored in the config file — only the env var names.
 
 ### `[service]` — behaviour
 
-| Field | Default | Description |
-|---|---|---|
-| `strip_html` | `true` | Strip `<b>` HTML tags from search lines |
-| `max_hits_per_file` | `10` | Max matching lines per file in results |
-| `default_max_results` | `25` | Default result limit when client doesn't specify |
+| Field | Env var | Default | Description |
+|---|---|---|---|
+| `strip_html` | `MCP_STRIP_HTML` | `true` | Strip `<b>` HTML tags from search lines (`true`/`false`/`1`/`0`/`yes`/`no`) |
+| `max_hits_per_file` | `MCP_MAX_HITS_PER_FILE` | `10` | Max matching lines per file in results |
+| `default_max_results` | `MCP_DEFAULT_MAX_RESULTS` | `25` | Default result limit when client doesn't specify |
 
-### `[cache]` — in-memory cache
+### `[cache]` — in-memory cache (search results only)
 
-| Field | Default | Description |
-|---|---|---|
-| `enabled` | `false` | Enable/disable cache |
-| `ttl_secs` | `300` | Entry lifetime |
-| `max_entries` | `1000` | Max cached responses |
+| Field | Env var | Default | Description |
+|---|---|---|---|
+| `enabled` | `MCP_CACHE_ENABLED` | `false` | Enable/disable cache (`Mutex<LruCache>` with LRU eviction) |
+| `ttl_secs` | `MCP_CACHE_TTL_SECS` | `300` | Entry lifetime in seconds (lazy eviction on access) |
+| `max_entries` | `MCP_CACHE_MAX_ENTRIES` | `1000` | Max cached responses (LRU eviction on overflow) |
 
-### `[rate_limit]` — token bucket
+### `[rate_limit]` — token bucket (GCRA via governor)
 
-| Field | Default | Description |
-|---|---|---|
-| `enabled` | `false` | Enable/disable rate limiting |
-| `requests_per_second` | `5` | Sustained request rate |
-| `burst` | `10` | Burst capacity |
+| Field | Env var | Default | Description |
+|---|---|---|---|
+| `enabled` | `MCP_RATE_LIMIT_ENABLED` | `false` | Enable/disable rate limiting |
+| `requests_per_second` | `MCP_RATE_LIMIT_RPS` | `5` | Sustained request rate |
+| `burst` | `MCP_RATE_LIMIT_BURST` | `10` | Burst capacity |
 
 ### `[transport]` — server mode
 
-| Field | Default | Description |
-|---|---|---|
-| `mode` | `"stdio"` | `"stdio"`, `"http"`, or `"both"` |
-| `bind_addr` | `"0.0.0.0:8080"` | HTTP bind address |
-| `http_path` | `"/mcp"` | MCP endpoint path |
-| `health_path` | `"/healthz"` | Liveness endpoint |
-| `ready_path` | `"/readyz"` | Readiness endpoint |
-| `metrics_path` | `"/metrics"` | Prometheus metrics endpoint |
-| `allowed_hosts` | `[]` | Allowed Host header values (DNS rebinding protection) |
+| Field | Env var | Default | Description |
+|---|---|---|---|
+| `mode` | `MCP_TRANSPORT` | `"both"` | `"stdio"`, `"http"`, or `"both"` |
+| `bind_addr` | `MCP_BIND_ADDR` | `"127.0.0.1:8080"` | HTTP bind address |
+| `http_path` | `MCP_HTTP_PATH` | `"/mcp"` | MCP endpoint path |
+| `health_path` | `MCP_HEALTH_PATH` | `"/healthz"` | Liveness endpoint |
+| `ready_path` | `MCP_READY_PATH` | `"/readyz"` | Readiness endpoint |
+| `metrics_path` | `MCP_METRICS_PATH` | `"/metrics"` | Prometheus metrics endpoint |
+| `allowed_hosts` | `MCP_ALLOWED_HOSTS` | `[]` | Allowed Host header values (comma-separated in env; DNS rebinding protection) |
+| `mcp_token_env` | — | `"MCP_TOKEN"` | Env var name for MCP server-side Bearer token (protects HTTP transport) |
+
+#### MCP server-side token auth
+
+When `mcp_token_env` (default: `MCP_TOKEN`) is set in the environment, every
+incoming request to the MCP endpoint must include:
+
+```
+Authorization: Bearer <token>
+```
+
+Requests without a matching token receive **HTTP 401 Unauthorized**. Token
+comparison uses constant-time comparison (timing side-channel protection).
+This only affects HTTP transport — stdio transport is unaffected.
+
+To enable:
+
+```bash
+export MCP_TOKEN="your-shared-secret"
+```
+
+> This is **inbound** auth for the MCP server itself — separate from the
+> `[opengrok.auth]` section which configures **outbound** auth to OpenGrok.
 
 ### `[log]`
 
-| Field | Default | Description |
-|---|---|---|
-| `level` | `"info"` | `trace`, `debug`, `info`, `warn`, `error` — overridden by `RUST_LOG` |
+| Field | Env var | Default | Description |
+|---|---|---|---|
+| `level` | `MCP_LOG_LEVEL`, `RUST_LOG` | `"info"` | `trace`, `debug`, `info`, `warn`, `error` (`RUST_LOG` applied last) |
 
 ---
 
@@ -149,7 +172,7 @@ allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp", "opengrok-mcp:8004"]
 allowed_hosts = ["localhost", "mcp.example.com"]
 ```
 
-Empty `allowed_hosts` uses rmcp defaults: `localhost`, `127.0.0.1`, `::1` only.
+Empty `allowed_hosts` accepts requests from any host.
 
 ---
 
@@ -181,10 +204,10 @@ The server exposes **25 tools** covering the full OpenGrok REST API.
 | Tool | Description | Key parameters |
 |---|---|---|
 | `search_code` | Full-text search (Lucene syntax) | `query`, `project?`, `max_results` |
-| `search_definition` | Find symbol definitions | `symbol`, `project?` |
-| `search_references` | Find all references to a symbol | `symbol`, `project?` |
-| `search_file_path` | Search for files by path glob | `path`, `project?` |
-| `search_history` | Search file history/changelog | `hist`, `project?` |
+| `search_definition` | Find symbol definitions | `symbol`, `project?`, `max_results` |
+| `search_references` | Find all references to a symbol | `symbol`, `project?`, `max_results` |
+| `search_file_path` | Search for files by path glob | `path`, `project?`, `max_results` |
+| `search_history` | Search file history/changelog | `hist`, `project?`, `max_results` |
 | `advanced_search` | Advanced search (all fields, pagination, sorting) | `full?`, `def?`, `symbol?`, `path?`, `hist?`, `file_type?`, `project?`, `max_results?`, `start?`, `max_hits_per_file?`, `sort?` |
 | `suggest` | Query autocomplete suggestions | `project`, `field`, `caret`, `full?`, `defs?`, `refs?`, `path?`, `file_type?` |
 
@@ -194,8 +217,8 @@ The server exposes **25 tools** covering the full OpenGrok REST API.
 |---|---|---|
 | `get_file_content` | Retrieve raw file content | `project`, `path` |
 | `get_file_definitions` | List definitions (functions, classes) in a file | `path` |
-| `get_file_genre` | File type (PLAIN, XREFABLE, IMAGE) | `path` |
-| `get_history` | File revision history | `path`, `start?`, `max?` |
+| `get_file_genre` | File type (PLAIN, XREFABLE, IMAGE, DATA, HTML) | `path` |
+| `get_history` | File revision history | `path`, `start?`, `max?`, `with_files?` |
 | `get_annotation` | Annotation (blame) for a file | `path` |
 
 ### Directory & project tools
@@ -207,10 +230,10 @@ The server exposes **25 tools** covering the full OpenGrok REST API.
 | `list_all_projects` | List all projects (including non-indexed) | — |
 | `list_groups` | List project groups | — |
 | `get_group_projects` | Projects within a group (including subgroups) | `group` |
-| `list_project_files` | List files in a project from index | `project` |
+| `list_project_files` | List files in a project from index | `project`, `path?` (default: `"/"`) |
 | `list_project_repos` | Repository paths for a project | `project` |
 | `get_project_property` | Per-project property value | `project`, `name` |
-| `get_repo_property` | Repository property (type, branch, remote) | `field`, `repository` |
+| `get_repo_property` | Repository property (type, branch, remote, ...) | `field`, `repository` |
 
 ### System tools
 
@@ -223,33 +246,23 @@ The server exposes **25 tools** covering the full OpenGrok REST API.
 
 ### Result format
 
-All search results include:
+All search results are returned as formatted text with:
+- Total hit count and per-file results
+- Line numbers and matching line content
+- Search duration in milliseconds
+- Pagination hints when `has_more` is indicated by the API
 
-```json
-{
-  "results": [...],
-  "total_hits": 1423,
-  "page": 1,
-  "has_more": true,
-  "duration_ms": 230
-}
-```
-
-- `has_more: true` tells the LLM that more results are available — it can request the next page
-- `duration_ms` is the server-side processing time, useful for latency debugging
-- HTML tags are stripped from result lines when `strip_html = true`
+HTML tags are stripped from result lines when `strip_html = true`.
 
 ### Pagination
 
-When `has_more` is `true`, the client can request additional pages by setting
-the `page` parameter:
+Use the `start` parameter in `advanced_search` for offset-based pagination:
 
 ```
-Tool: search_code
-Query: "init_boot_images"
-Project: "aosp"
-Page: 2
+Tool: advanced_search
+full: "init_boot_images"
+project: "aosp"
+start: 25
 ```
 
-The server transparently handles OpenGrok's pagination mechanics and exposes
-a simple page-based interface.
+The server transparently handles OpenGrok's pagination mechanics.
