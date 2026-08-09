@@ -17,6 +17,7 @@ config/config.toml
 config/.env
 config/certs/*.crt
 config/certs/*.pem
+docker-compose.local.yml
 
 # Release artifacts
 builds/
