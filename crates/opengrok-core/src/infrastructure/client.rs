@@ -49,7 +49,7 @@ const MAX_RESPONSE_BYTES: u64 = 50 * 1024 * 1024;
 // ---------------------------------------------------------------------------
 
 /// Authentication mode for connecting to OpenGrok.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum AuthMode {
     /// No authentication.
     None,
@@ -57,6 +57,20 @@ pub enum AuthMode {
     Bearer(String),
     /// HTTP Basic authentication.
     Basic { username: String, password: String },
+}
+
+impl std::fmt::Debug for AuthMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => f.debug_tuple("None").finish(),
+            Self::Bearer(_) => f.debug_tuple("Bearer").field(&"[redacted]").finish(),
+            Self::Basic { username, .. } => f
+                .debug_struct("Basic")
+                .field("username", username)
+                .field("password", &"[redacted]")
+                .finish(),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
