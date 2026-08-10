@@ -32,9 +32,7 @@ clap = { version = "4", features = ["derive"] }
 subtle.workspace = true
 
 [dev-dependencies]
-wiremock = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
-tempfile = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
 
 [build-dependencies]
