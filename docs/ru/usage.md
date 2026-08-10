@@ -29,65 +29,89 @@ opengrok-mcp --version
 ### `[opengrok]` — подключение
 
 | Поле | Env var | По умолчанию | Описание |
-|---|---|---|---|
+|---|---|---|---|---|
 | `base_url` | `OPENGROK_URL` | `""` | **Обязательно.** Базовый URL OpenGrok (например, `https://opengrok.example.com`) |
-| `timeout_secs` | — | `60` | Таймаут HTTP-запроса — поиск по AOSP может быть медленным |
-| `ca_cert` | `OPENGROK_CA_CERT` / `SSL_CERT_FILE` | `"./config/certs/russian_trusted_root_ca_pem.crt"` | Путь к PEM-файлу пользовательского CA |
-| `ca_cert_dir` | `SSL_CERT_DIR` | — | Директория с CA-сертификатами |
-| `verify_ssl` | `OPENGROK_VERIFY_SSL=false` | `true` | Включение/отключение проверки TLS |
+| `timeout_secs` | `OPENGROK_TIMEOUT_SECS` | `30` | Таймаут HTTP-запроса в секундах (макс. тело ответа: 50 МБ) |
+| `ca_cert` | `OPENGROK_CA_CERT`, `SSL_CERT_FILE` | — | Путь к PEM-файлу пользовательского CA-сертификата (загружается дополнительно к системному trust store; приоритет `OPENGROK_CA_CERT`) |
+| `ca_cert_dir` | `OPENGROK_CA_CERT_DIR`, `SSL_CERT_DIR` | — | Директория с файлами CA-сертификатов (.crt, .pem); приоритет `OPENGROK_CA_CERT_DIR` |
+| `verify_ssl` | `OPENGROK_VERIFY_SSL` | `true` | Включение/отключение проверки TLS-сертификата (используйте `false`/`0`/`no` для отключения) |
 
 ### `[opengrok.auth]` — аутентификация
 
-| Поле | Описание |
-|---|---|
-| `mode` | `"token"`, `"basic"` или `"none"` |
-| `token_env` | Имя переменной окружения для Bearer-токена (по умолчанию: `OPENGROK_TOKEN`) |
-| `username_env` | Имя переменной окружения для имени пользователя Basic Auth (по умолчанию: `OPENGROK_USERNAME`) |
-| `password_env` | Имя переменной окружения для пароля Basic Auth (по умолчанию: `OPENGROK_PASSWORD`) |
+| Поле | По умолчанию | Описание |
+|---|---|---|
+| `mode` | `"none"` | `"token"`, `"basic"` или `"none"` |
+| `token_env` | `"OPENGROK_TOKEN"` | Имя переменной окружения для Bearer-токена (только для `mode = "token"`) |
+| `username_env` | — | Имя переменной окружения для логина Basic Auth (только для `mode = "basic"`; **должно быть задано**) |
+| `password_env` | — | Имя переменной окружения для пароля Basic Auth (только для `mode = "basic"`; пустой если не задан) |
 
 Учётные данные никогда не хранятся в файле конфигурации — только имена переменных окружения.
 
 ### `[service]` — поведение
 
-| Поле | По умолчанию | Описание |
-|---|---|---|
-| `strip_html` | `true` | Удаление HTML-тегов `<b>` из строк поиска |
-| `max_hits_per_file` | `10` | Максимум строк совпадений в одном файле |
-| `default_max_results` | `25` | Лимит результатов по умолчанию, если клиент не указал |
+| Поле | Env var | По умолчанию | Описание |
+|---|---|---|---|
+| `strip_html` | `MCP_STRIP_HTML` | `true` | Удаление HTML-тегов `<b>` из строк поиска (`true`/`false`/`1`/`0`/`yes`/`no`) |
+| `max_hits_per_file` | `MCP_MAX_HITS_PER_FILE` | `10` | Максимум строк совпадений в одном файле |
+| `default_max_results` | `MCP_DEFAULT_MAX_RESULTS` | `25` | Лимит результатов по умолчанию, если клиент не указал |
 
-### `[cache]` — кэш в памяти
+### `[cache]` — кэш в памяти (только результаты поиска)
 
-| Поле | По умолчанию | Описание |
-|---|---|---|
-| `enabled` | `false` | Включение/отключение кэша |
-| `ttl_secs` | `300` | Время жизни записи |
-| `max_entries` | `1000` | Максимальное количество кэшированных ответов |
+| Поле | Env var | По умолчанию | Описание |
+|---|---|---|---|
+| `enabled` | `MCP_CACHE_ENABLED` | `false` | Включение/отключение кэша (`Mutex<LruCache>` с LRU-вытеснением) |
+| `ttl_secs` | `MCP_CACHE_TTL_SECS` | `300` | Время жизни записи в секундах (ленивое удаление при доступе) |
+| `max_entries` | `MCP_CACHE_MAX_ENTRIES` | `1000` | Максимум записей в кэше (LRU-вытеснение при переполнении) |
 
-### `[rate_limit]` — ограничение частоты (token bucket)
+### `[rate_limit]` — ограничение частоты (token bucket, GCRA через governor)
 
-| Поле | По умолчанию | Описание |
-|---|---|---|
-| `enabled` | `false` | Включение/отключение ограничения |
-| `requests_per_second` | `5` | Устойчивая частота запросов |
-| `burst` | `10` | Ёмкость всплеска |
+| Поле | Env var | По умолчанию | Описание |
+|---|---|---|---|
+| `enabled` | `MCP_RATE_LIMIT_ENABLED` | `false` | Включение/отключение ограничения |
+| `requests_per_second` | `MCP_RATE_LIMIT_RPS` | `5` | Устойчивая частота запросов |
+| `burst` | `MCP_RATE_LIMIT_BURST` | `10` | Ёмкость всплеска |
 
 ### `[transport]` — режим сервера
 
-| Поле | По умолчанию | Описание |
-|---|---|---|
-| `mode` | `"stdio"` | `"stdio"`, `"http"` или `"both"` |
-| `bind_addr` | `"0.0.0.0:8080"` | Адрес для HTTP |
-| `http_path` | `"/mcp"` | Путь эндпоинта MCP |
-| `health_path` | `"/healthz"` | Эндпоинт живучести |
-| `ready_path` | `"/readyz"` | Эндпоинт готовности |
-| `metrics_path` | `"/metrics"` | Эндпоинт метрик Prometheus |
-| `allowed_hosts` | `[]` | Разрешённые значения заголовка Host (защита от DNS rebinding) |
+| Поле | Env var | По умолчанию | Описание |
+|---|---|---|---|
+| `mode` | `MCP_TRANSPORT` | `"both"` | `"stdio"`, `"http"` или `"both"` |
+| `bind_addr` | `MCP_BIND_ADDR` | `"127.0.0.1:8080"` | Адрес для HTTP |
+| `http_path` | `MCP_HTTP_PATH` | `"/mcp"` | Путь эндпоинта MCP |
+| `health_path` | `MCP_HEALTH_PATH` | `"/healthz"` | Эндпоинт живучести |
+| `ready_path` | `MCP_READY_PATH` | `"/readyz"` | Эндпоинт готовности |
+| `metrics_path` | `MCP_METRICS_PATH` | `"/metrics"` | Эндпоинт метрик Prometheus |
+| `allowed_hosts` | `MCP_ALLOWED_HOSTS` | `[]` | Разрешённые значения заголовка Host (через запятую в env; защита от DNS rebinding) |
+| `mcp_auth_token` | `MCP_AUTH_TOKEN` | `""` | Bearer-токен для аутентификации MCP-эндпоинта (пустая строка = отключено). Можно задать в TOML или через env. |
+
+#### Аутентификация MCP-сервера (входящие запросы)
+
+Задайте `mcp_auth_token` в `config.toml` или через переменную окружения `MCP_AUTH_TOKEN`.
+Если значение не пустое, каждый входящий запрос к MCP-эндпоинту должен содержать заголовок:
+
+```
+Authorization: Bearer <токен>
+```
+
+Запросы без токена получают **HTTP 401 Unauthorized**. Сравнение токена —
+`subtle::ConstantTimeEq` (timing-safe). Влияет только на HTTP-транспорт,
+stdio-транспорт не затрагивается. Пустая строка отключает аутентификацию.
+
+```toml
+[transport]
+mcp_auth_token = "shared-secret-12345"
+```
+
+Или через env: `export MCP_AUTH_TOKEN=shared-secret-12345`
+
+> Это **входящая** аутентификация самого MCP-сервера — в отличие от секции
+> `[opengrok.auth]`, которая настраивает **исходящую** аутентификацию к OpenGrok.
 
 ### `[log]`
 
-| Поле | По умолчанию | Описание |
-|---|---|---|
-| `level` | `"info"` | `trace`, `debug`, `info`, `warn`, `error` — переопределяется `RUST_LOG` |
+| Поле | Env var | По умолчанию | Описание |
+|---|---|---|---|
+| `level` | `MCP_LOG_LEVEL`, `RUST_LOG` | `"info"` | `trace`, `debug`, `info`, `warn`, `error` (`RUST_LOG` применяется последним) |
 
 ---
 
@@ -150,8 +174,7 @@ allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp", "opengrok-mcp:8004"]
 allowed_hosts = ["localhost", "mcp.example.com"]
 ```
 
-Пустой `allowed_hosts` использует настройки rmcp по умолчанию: только `localhost`,
-`127.0.0.1`, `::1`.
+Пустой `allowed_hosts` принимает запросы от любого хоста.
 
 ---
 
@@ -183,10 +206,10 @@ healthcheck:
 | Инструмент | Описание | Основные параметры |
 |---|---|---|
 | `search_code` | Полнотекстовый поиск (Lucene-синтаксис) | `query`, `project?`, `max_results` |
-| `search_definition` | Поиск определения символа | `symbol`, `project?` |
-| `search_references` | Поиск всех использований символа | `symbol`, `project?` |
-| `search_file_path` | Поиск файлов по пути (glob) | `path`, `project?` |
-| `search_history` | Поиск по истории изменений | `hist`, `project?` |
+| `search_definition` | Поиск определения символа | `symbol`, `project?`, `max_results` |
+| `search_references` | Поиск всех использований символа | `symbol`, `project?`, `max_results` |
+| `search_file_path` | Поиск файлов по пути (glob) | `path`, `project?`, `max_results` |
+| `search_history` | Поиск по истории изменений | `hist`, `project?`, `max_results` |
 | `advanced_search` | Расширенный поиск (все поля, пагинация, сортировка) | `full?`, `def?`, `symbol?`, `path?`, `hist?`, `file_type?`, `project?`, `max_results?`, `start?`, `max_hits_per_file?`, `sort?` |
 | `suggest` | Автодополнение поискового запроса | `project`, `field`, `caret`, `full?`, `defs?`, `refs?`, `path?`, `file_type?` |
 
@@ -196,8 +219,8 @@ healthcheck:
 |---|---|---|
 | `get_file_content` | Получение содержимого файла | `project`, `path` |
 | `get_file_definitions` | Определения (функции, классы) в файле | `path` |
-| `get_file_genre` | Тип файла (PLAIN, XREFABLE, IMAGE) | `path` |
-| `get_history` | История изменений файла | `path`, `start?`, `max?` |
+| `get_file_genre` | Тип файла (PLAIN, XREFABLE, IMAGE, DATA, HTML) | `path` |
+| `get_history` | История изменений файла | `path`, `start?`, `max?`, `with_files?` |
 | `get_annotation` | Аннотация (blame) для файла | `path` |
 
 ### Инструменты для директорий и проектов
@@ -209,10 +232,10 @@ healthcheck:
 | `list_all_projects` | Список всех проектов (включая неиндексированные) | — |
 | `list_groups` | Список групп проектов | — |
 | `get_group_projects` | Проекты внутри группы (включая подгруппы) | `group` |
-| `list_project_files` | Список файлов проекта из индекса | `project` |
+| `list_project_files` | Список файлов проекта из индекса | `project`, `path?` (по умолчанию: `"/"`) |
 | `list_project_repos` | Пути репозиториев проекта | `project` |
 | `get_project_property` | Per-project свойство | `project`, `name` |
-| `get_repo_property` | Свойство репозитория (тип, ветка, remote) | `field`, `repository` |
+| `get_repo_property` | Свойство репозитория (тип, ветка, remote, ...) | `field`, `repository` |
 
 ### Системные инструменты
 
@@ -225,33 +248,23 @@ healthcheck:
 
 ### Формат результатов
 
-Все результаты поиска включают:
+Все результаты поиска возвращаются в виде форматированного текста:
+- Общее количество совпадений и результаты по файлам
+- Номера строк и содержимое совпадающих строк
+- Время поиска в миллисекундах
+- Подсказки пагинации при наличии `has_more` в ответе API
 
-```json
-{
-  "results": [...],
-  "total_hits": 1423,
-  "page": 1,
-  "has_more": true,
-  "duration_ms": 230
-}
-```
-
-- `has_more: true` сообщает LLM, что доступны дополнительные результаты — можно запросить следующую страницу
-- `duration_ms` — время обработки на стороне сервера, полезно для отладки задержек
-- HTML-теги удаляются из строк результатов, если `strip_html = true`
+HTML-теги удаляются из строк результатов, если `strip_html = true`.
 
 ### Пагинация
 
-Когда `has_more` равно `true`, клиент может запросить дополнительные страницы,
-установив параметр `page`:
+Используйте параметр `start` в `advanced_search` для offset-based пагинации:
 
 ```
-Tool: search_code
-Query: "init_boot_images"
-Project: "aosp"
-Page: 2
+Tool: advanced_search
+full: "init_boot_images"
+project: "aosp"
+start: 25
 ```
 
-Сервер прозрачно обрабатывает механику пагинации OpenGrok и предоставляет
-простой интерфейс на основе страниц.
+Сервер прозрачно обрабатывает механику пагинации OpenGrok.

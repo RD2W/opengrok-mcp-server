@@ -58,7 +58,7 @@ export OPENGROK_PASSWORD="pass"
 cargo run --release
 ```
 
-The server starts in stdio mode by default, ready for MCP clients.
+The server starts in `both` mode by default (stdio + HTTP on `127.0.0.1:8080`).
 
 ---
 
@@ -67,9 +67,10 @@ The server starts in stdio mode by default, ready for MCP clients.
 ### Local development
 
 ```bash
-# Set credentials in config/.env:
+# Set credentials in config/.env (see config/.env.example):
 #   OPENGROK_TOKEN=your-token
 #   OPENGROK_URL=https://opengrok.example.com
+#   MCP_TOKEN=shared-secret        # optional, for MCP server auth
 
 docker compose up -d
 ```
@@ -85,7 +86,7 @@ tagged release.
 docker pull rd2w/opengrok-mcp:latest
 
 # Or a specific version
-docker pull rd2w/opengrok-mcp:v0.1.0
+docker pull rd2w/opengrok-mcp:v1.1.1
 
 # Use the docker-compose file for pre-built images
 docker compose -f docker-compose.hub.yml up -d
@@ -107,7 +108,7 @@ access is required at runtime.
 #    (pulls base images, fetches Rust crates, compiles — all baked in)
 docker build -t opengrok-mcp:latest .
 
-# 2. Export as a single portable archive (~35 MB)
+# 2. Export as a single portable archive (~23 MB)
 docker save opengrok-mcp:latest | gzip > opengrok-mcp.tar.gz
 
 # 3. Transfer to the air-gapped host (USB drive, scp to jump host, etc.)
@@ -157,6 +158,8 @@ If your OpenGrok instance uses a corporate or self-signed certificate:
    [opengrok]
    ca_cert = "./config/certs/your-ca.crt"
    ```
+
+   The custom CA is loaded **in addition to** the system trust store.
 
 3. Or use environment variables:
    ```bash

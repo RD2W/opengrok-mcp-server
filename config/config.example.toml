@@ -1,127 +1,157 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Maxim Krutovercev (RD2W) <mkrutovercev@yandex.ru>
+
 # OpenGrok MCP Server Configuration
 #
-# Copy this file to config.toml or config/config.toml and adjust.
-# Values can be overridden via environment variables (see comments).
+# Copy: cp config/config.example.toml config/config.toml
+#
+# Priority: --config <path> → ./config/config.toml → ./config.toml → defaults.
+#
+# Environment variables override specific fields (see config/.env.example).
 
-# ---------------------------------------------------------------------------
-# OpenGrok connection settings
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# [opengrok] — OpenGrok connection
+# ===========================================================================
 [opengrok]
 # Base URL of the OpenGrok instance (required).
 # Environment: OPENGROK_URL
 base_url = "https://opengrok.example.com"
 
-# HTTP request timeout in seconds.
+# HTTP request timeout in seconds (max response body: 50 MB).
+# Environment: OPENGROK_TIMEOUT_SECS
 timeout_secs = 30
 
 # Path to custom CA certificate PEM file for TLS.
-# Environment: OPENGROK_CA_CERT or SSL_CERT_FILE
+# Environment: OPENGROK_CA_CERT, SSL_CERT_FILE (priority: OPENGROK_CA_CERT first).
+# Certificate is loaded IN ADDITION to the system trust store.
 # ca_cert = "/path/to/ca-cert.pem"
 
-# Path to directory of CA certificate files for TLS.
-# Environment: SSL_CERT_DIR
+# Path to directory of CA certificate files (.crt and .pem extensions).
+# Environment: OPENGROK_CA_CERT_DIR, SSL_CERT_DIR (priority: OPENGROK_CA_CERT_DIR first).
 # ca_cert_dir = "/etc/ssl/certs"
 
-# Whether to verify TLS certificates.
-# Environment: OPENGROK_VERIFY_SSL=false or OPENGROK_VERIFY_SSL=0 to disable
+# Whether to verify the OpenGrok server's TLS certificate.
+# Environment: OPENGROK_VERIFY_SSL (false/0/no — disables verification).
 verify_ssl = true
 
-# ---------------------------------------------------------------------------
-# OpenGrok authentication
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# [opengrok.auth] — Authentication
+# ===========================================================================
 [opengrok.auth]
-# Authentication mode: "token", "basic", or "none".
-#
-# "token"  — Bearer token, read from the env var named in `token_env`.
-# "basic"  — HTTP Basic Auth, credentials read from `username_env`/`password_env`.
-# "none"   — No authentication header sent.
-#
-# CREDENTIALS ARE NEVER STORED IN THIS FILE.
-# Use environment variables or a config/.env file instead.
+# Authentication mode for OpenGrok API requests.
+#   "token"  — Bearer token from the env var named in token_env.
+#   "basic"  — HTTP Basic Auth, credentials from username_env / password_env.
+#   "none"   — no authentication header (for open instances).
+# CREDENTIALS ARE NEVER STORED IN THIS FILE — only env var names!
 mode = "none"
 
-# Environment variable name holding the bearer token.
-# The value is read from that env var at startup, never from this file.
-# Default: OPENGROK_TOKEN
+# Env var name holding the Bearer token (only used when mode = "token").
+# Default: "OPENGROK_TOKEN"
 # token_env = "OPENGROK_TOKEN"
 
-# Environment variable name holding the Basic auth username.
-# The value is read from that env var at startup, never from this file.
+# Env var name holding the Basic auth username (only used when mode = "basic").
+# Must be set for mode = "basic", otherwise startup will fail.
 # username_env = "OPENGROK_USERNAME"
 
-# Environment variable name holding the Basic auth password.
-# The value is read from that env var at startup, never from this file.
+# Env var name holding the Basic auth password (only used when mode = "basic").
+# If not set — empty password is used.
 # password_env = "OPENGROK_PASSWORD"
 
-# ---------------------------------------------------------------------------
-# Service behaviour
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# [service] — Service behaviour
+# ===========================================================================
 [service]
 # Strip <b> HTML tags from search result lines (recommended for LLMs).
+# Environment: MCP_STRIP_HTML (true/false/1/0/yes/no)
 strip_html = true
 
-# Maximum matching lines per file. Caps large result sets for AOSP-scale repos.
+# Maximum matching lines per file in search results.
+# Environment: MCP_MAX_HITS_PER_FILE
 max_hits_per_file = 10
 
-# Default maximum result documents when not specified by the client.
+# Default maximum result documents when client doesn't specify max_results.
+# Environment: MCP_DEFAULT_MAX_RESULTS
 default_max_results = 25
 
-# ---------------------------------------------------------------------------
-# Cache settings (in-memory, per-process)
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# [cache] — In-memory cache (search results only)
+# ===========================================================================
 [cache]
-# Enable in-memory caching of OpenGrok API responses.
+# Enable in-memory caching of OpenGrok API search responses (Mutex<LruCache>).
+# ONLY search() results are cached — file contents are NOT cached.
+# Environment: MCP_CACHE_ENABLED (true/false/1/0/yes/no)
 enabled = false
 
-# Time-to-live for cache entries in seconds.
+# Time-to-live for cache entries in seconds (lazy eviction on access).
+# Environment: MCP_CACHE_TTL_SECS
 ttl_secs = 300
 
-# Maximum number of cache entries.
+# Maximum number of cache entries (LRU eviction on overflow).
+# Environment: MCP_CACHE_MAX_ENTRIES
 max_entries = 1000
 
-# ---------------------------------------------------------------------------
-# Rate limiting (protects the OpenGrok server from overload)
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# [rate_limit] — Rate limiting (token bucket, GCRA via governor)
+# ===========================================================================
 [rate_limit]
 # Enable rate limiting for outgoing OpenGrok API requests.
+# Environment: MCP_RATE_LIMIT_ENABLED (true/false/1/0/yes/no)
 enabled = false
 
-# Maximum requests per second to the OpenGrok API.
+# Sustained request rate per second.
+# Environment: MCP_RATE_LIMIT_RPS
 requests_per_second = 5
 
 # Maximum burst size (tokens refilled at requests_per_second rate).
+# Environment: MCP_RATE_LIMIT_BURST
 burst = 10
 
-# ---------------------------------------------------------------------------
-# Transport settings (MCP protocol layer)
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# [transport] — Transport layer
+# ===========================================================================
 [transport]
-# Transport mode: "stdio", "http", or "both".
+# MCP protocol transport mode.
+#   "stdio" — stdin/stdout (docker exec, Claude Desktop, debugging).
+#   "http"  — Streamable HTTP (axum + rmcp, health/metrics endpoints).
+#   "both"  — stdio + HTTP simultaneously (tokio::spawn).
+# Environment: MCP_TRANSPORT
 mode = "both"
 
-# Bind address for the HTTP transport.
+# Bind address for HTTP transport (only for mode = "http" or "both").
+# Environment: MCP_BIND_ADDR
 bind_addr = "0.0.0.0:8080"
 
 # URL path for the MCP Streamable HTTP endpoint.
+# Environment: MCP_HTTP_PATH
 http_path = "/mcp"
 
-# Health check endpoint path.
+# URL path for health check endpoint (liveness).
+# Environment: MCP_HEALTH_PATH
 health_path = "/healthz"
 
-# Readiness check endpoint path.
+# URL path for readiness check endpoint.
+# Environment: MCP_READY_PATH
 ready_path = "/readyz"
 
-# Prometheus-compatible metrics endpoint path.
+# URL path for Prometheus metrics endpoint (text/plain format).
+# Environment: MCP_METRICS_PATH
 metrics_path = "/metrics"
 
 # Allowed hostnames for Streamable HTTP Host header validation.
-# Leave empty to accept any host.
-# allowed_hosts = ["opengrok.example.com", "localhost:8080"]
+# Environment: MCP_ALLOWED_HOSTS (comma-separated).
+# Empty list — accepts requests from any host.
+# allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp:8004"]
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
+# Bearer token for MCP endpoint authentication. When non-empty, clients must
+# include `Authorization: Bearer <token>` in every request. Empty = disabled.
+# Can be set directly here or overridden via environment variable.
+# Environment: MCP_AUTH_TOKEN.
+# mcp_auth_token = ""
+
+# ===========================================================================
+# [log] — Logging
+# ===========================================================================
 [log]
 # Log level: "trace", "debug", "info", "warn", "error".
-# Environment: RUST_LOG
+# Environment: MCP_LOG_LEVEL, RUST_LOG (RUST_LOG is applied last).
 level = "info"

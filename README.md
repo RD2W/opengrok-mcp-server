@@ -110,14 +110,21 @@ docker compose up -d
 See `config/config.example.toml` for all options. Key sections:
 
 | Section | Purpose |
-|---|---|
-| `[opengrok]` | Base URL, auth mode, TLS, CA cert path, timeout |
+|---|---|---|
+| `[opengrok]` | Base URL, timeout (30s), TLS (custom CA cert, verify_ssl) |
 | `[opengrok.auth]` | `token` / `basic` / `none`, env var names for credentials |
-| `[service]` | HTML stripping, result caps, pagination defaults |
-| `[cache]` | In-memory TTL cache for repeated searches |
-| `[rate_limit]` | Token-bucket rate limiter (protects OpenGrok) |
-| `[transport]` | Transport mode, bind address, `allowed_hosts` for DNS rebinding |
+| `[service]` | HTML stripping, result caps (`max_hits_per_file`, `default_max_results`) |
+| `[cache]` | In-memory TTL LRU cache (`Mutex<LruCache>`) for repeated searches |
+| `[rate_limit]` | Token-bucket rate limiter (GCRA via `governor`, protects OpenGrok) |
+| `[transport]` | Transport mode (`both` by default), bind address (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
 | `[log]` | Log level (`RUST_LOG` overrides) |
+
+#### MCP server-side token auth
+
+When `mcp_auth_token` is non-empty (set in config.toml or via `MCP_AUTH_TOKEN` env var),
+the HTTP transport requires `Authorization: Bearer <token>` on every incoming MCP request.
+Token comparison uses `subtle::ConstantTimeEq` (timing-safe). This is **inbound** auth for
+the MCP server — separate from the OpenGrok **outbound** auth configured in `[opengrok.auth]`.
 
 #### Streamable HTTP & DNS rebinding protection
 
@@ -146,7 +153,7 @@ Full documentation is available in `docs/en/`:
 ### Development
 
 ```bash
-cargo test                    # 158 tests
+cargo test                    # 184 tests
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```
@@ -156,7 +163,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 ```
 crates/opengrok-core/    # Library — domain models, HTTP client, TLS, cache, rate-limit
 crates/opengrok-mcp/     # Binary — MCP server, config, transport (stdio + HTTP)
-config/                  # Configuration files and CA certificates (gitignored)
+config/                  # Configuration files (gitignored): config.toml, .env, certs/
 ```
 
 ### License
@@ -265,14 +272,22 @@ docker compose up -d
 Все опции в `config/config.example.toml`. Основные секции:
 
 | Секция | Назначение |
-|---|---|
-| `[opengrok]` | Базовый URL, режим аутентификации, TLS, путь к CA-сертификату, таймаут |
+|---|---|---|
+| `[opengrok]` | Базовый URL, таймаут (30с), TLS (пользовательский CA-сертификат, verify_ssl) |
 | `[opengrok.auth]` | `token` / `basic` / `none`, имена переменных окружения для учётных данных |
-| `[service]` | Очистка HTML, лимиты результатов, пагинация по умолчанию |
-| `[cache]` | TTL-кэш в памяти для повторных поисков |
-| `[rate_limit]` | Ограничитель частоты token bucket (защищает OpenGrok) |
-| `[transport]` | Режим транспорта, адрес, `allowed_hosts` для защиты от DNS rebinding |
+| `[service]` | Очистка HTML, лимиты результатов (`max_hits_per_file`, `default_max_results`) |
+| `[cache]` | TTL LRU-кэш в памяти (`Mutex<LruCache>`) для повторных поисков |
+| `[rate_limit]` | Ограничитель частоты token bucket (GCRA через `governor`, защищает OpenGrok) |
+| `[transport]` | Режим транспорта (`both` по умолчанию), адрес (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
 | `[log]` | Уровень логирования (переопределяется `RUST_LOG`) |
+
+#### Токен-аутентификация MCP-сервера
+
+Если `mcp_auth_token` не пуст (задан в config.toml или через `MCP_AUTH_TOKEN`),
+HTTP-транспорт требует заголовок `Authorization: Bearer <токен>` на каждом входящем
+MCP-запросе. Сравнение токена — `subtle::ConstantTimeEq` (timing-safe). Это **входящая**
+аутентификация MCP-сервера — отдельно от **исходящей** аутентификации к OpenGrok
+в `[opengrok.auth]`.
 
 #### Streamable HTTP и защита от DNS rebinding
 
@@ -301,7 +316,7 @@ allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp", "opengrok-mcp:8004"]
 ### Разработка
 
 ```bash
-cargo test                    # 158 тестов
+cargo test                    # 170 тестов
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```
@@ -311,7 +326,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 ```
 crates/opengrok-core/    # Библиотека — доменные модели, HTTP-клиент, TLS, кэш, rate-limit
 crates/opengrok-mcp/     # Бинарный — MCP-сервер, конфигурация, транспорт (stdio + HTTP)
-config/                  # Файлы конфигурации и CA-сертификаты (в gitignore)
+config/                  # Файлы конфигурации (в gitignore): config.toml, .env, certs/
 ```
 
 ### Лицензия

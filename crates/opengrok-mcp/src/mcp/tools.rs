@@ -199,6 +199,13 @@ pub struct GetGroupProjectsParams {
 pub struct ListProjectFilesParams {
     #[schemars(description = "Project name")]
     pub project: String,
+    #[schemars(description = "Directory path within the project (default: root \"/\")")]
+    #[serde(default = "default_root_path")]
+    pub path: String,
+}
+
+fn default_root_path() -> String {
+    "/".into()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]

@@ -17,23 +17,25 @@ opengrok-mcp-server/
 │   │       └── infrastructure/
 │   │           ├── client.rs  # HTTP-клиент для OpenGrok REST API
 │   │           ├── tls.rs     # Построитель TLS-конфигурации (rustls + системные сертификаты)
-│   │           ├── cache.rs   # TTL-кэш в памяти (DashMap)
+│   │           ├── cache.rs   # TTL-кэш в памяти (Mutex<LruCache>)
 │   │           ├── rate_limit.rs # Ограничитель частоты token bucket (governor)
-│   │           └── format.rs  # Очистка HTML-тегов, нормализация результатов
+│   │           └── format.rs  # Очистка HTML-тегов, форматирование результатов
 │   └── opengrok-mcp/          # Бинарный крейт — слой MCP-сервера
 │       └── src/
 │           ├── main.rs        # Точка входа, аргументы CLI, инициализация логирования
 │           ├── config.rs      # Загрузка TOML-конфигурации + переопределение через env
 │           ├── mcp/
 │           │   ├── mod.rs     # Инициализация MCP-сервера, диспетчеризация инструментов
-│           │   └── tools.rs   # Определения инструментов (JSON Schema через schemars)
+│           │   ├── tools.rs   # Типы параметров инструментов (JSON Schema через schemars)
+│           │   └── tools_impl/ # Реализации обработчиков по категориям
 │           ├── transport/
-│           │   ├── mod.rs     # Абстракция транспорта
+│           │   ├── mod.rs     # Диспетчеризация транспорта (stdio / http / both)
 │           │   ├── stdio.rs   # Транспорт stdin/stdout
 │           │   └── http.rs    # Axum + rmcp Streamable HTTP транспорт
 │           └── health.rs      # Эндпоинты /healthz, /readyz, /metrics
 ├── config/
 │   ├── config.example.toml    # Аннотированный шаблон конфигурации
+│   ├── .env.example           # Справочник переменных окружения
 │   ├── config.toml            # Локальная конфигурация (в gitignore)
 │   ├── .env                   # Секретные переменные окружения (в gitignore)
 │   └── certs/                 # CA-сертификаты для TLS (в gitignore)
@@ -82,27 +84,28 @@ MCP** — это чистая HTTP-клиентская библиотека, к
 
 ### `opengrok-core` — домен и инфраструктура
 
-| Модуль | Строк | Назначение |
-|---|---|---|
-| `domain.rs` | 1206 | Все типы данных: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, типы ошибок (`CoreError`) |
-| `application.rs` | 480 | Высокоуровневые операции: `search()`, `get_file_content()`, `get_history()`, с пагинацией, кэшированием и форматированием |
-| `infrastructure/client.rs` | 930 | HTTP-клиент на `reqwest`: формирование запросов, добавление заголовков аутентификации, разбор ответов, обработка особенностей OpenGrok |
-| `infrastructure/tls.rs` | 476 | TLS-конфигурация: загрузка пользовательских CA, настройка rustls, разбор PEM |
-| `infrastructure/format.rs` | 598 | Очистка HTML-тегов (`<b>`, `<i>` и др.), нормализация текста результатов, форматирование всех типов ответов |
-| `infrastructure/cache.rs` | 221 | Кэш в памяти с TTL-вытеснением на основе `DashMap` |
-| `infrastructure/rate_limit.rs` | 110 | Ограничитель частоты token bucket через `governor` |
+| Модуль | Назначение |
+|---|---|
+| `domain.rs` | Все типы данных: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, типы ошибок (`DomainError`) |
+| `application.rs` | Высокоуровневые операции: `search()`, `get_file_content()`, `get_history()`, с пагинацией, кэшированием и форматированием |
+| `infrastructure/client.rs` | HTTP-клиент на `reqwest`: формирование запросов, добавление заголовков аутентификации, разбор ответов, обработка особенностей OpenGrok |
+| `infrastructure/tls.rs` | TLS-конфигурация: загрузка пользовательских CA, настройка rustls, разбор PEM |
+| `infrastructure/format.rs` | Очистка HTML-тегов (`<b>`, `<i>` и др.), форматирование всех типов ответов |
+| `infrastructure/cache.rs` | Кэш в памяти с TTL-вытеснением на основе `Mutex<LruCache>` |
+| `infrastructure/rate_limit.rs` | Ограничитель частоты token bucket через `governor` |
 
 ### `opengrok-mcp` — MCP-сервер
 
-| Модуль | Строк | Назначение |
-|---|---|---|
-| `mcp/mod.rs` | 485 | Инициализация MCP-сервера, диспетчеризация обработчиков 25 инструментов, маппинг ошибок (`CoreError` → коды ошибок MCP) |
-| `mcp/tools.rs` | 230 | Определения типов 25 инструментов с JSON Schema (schemars): имена, описания, типы параметров, значения по умолчанию |
-| `config.rs` | 466 | Загрузка конфигурации: разбор TOML, переопределение через env, валидация |
-| `transport/http.rs` | 67 | Маршрутизатор Axum с `NeverSessionManager` (stateless, протокол MCP 2026-07-28): MCP-эндпоинт, health, readiness, metrics |
-| `transport/stdio.rs` | 20 | Транспорт stdin/stdout через rmcp |
-| `health.rs` | 165 | Обработчики health check: живучесть, готовность с пробным запросом к OpenGrok, сбор метрик Prometheus |
-| `main.rs` | 124 | Точка входа: разбор CLI, инициализация конфигурации, выбор транспорта, обработка сигналов завершения |
+| Модуль | Назначение |
+|---|---|
+| `mcp/mod.rs` | Инициализация MCP-сервера, диспетчеризация обработчиков 25 инструментов |
+| `mcp/tools.rs` | Типы параметров 25 инструментов с JSON Schema (schemars): имена, описания, значения по умолчанию |
+| `mcp/tools_impl/` | Реализации обработчиков, сгруппированные по категориям (search, content, history, metadata, system) |
+| `config.rs` | Загрузка конфигурации: разбор TOML, переопределение через env, валидация |
+| `transport/http.rs` | Маршрутизатор Axum с `NeverSessionManager` (stateless, протокол MCP 2026-07-28): MCP-эндпоинт, health, readiness, metrics, middleware аутентификации по MCP-токену |
+| `transport/stdio.rs` | Транспорт stdin/stdout через rmcp |
+| `health.rs` | Обработчики health check: живучесть, готовность с пробным запросом к OpenGrok, сбор метрик Prometheus |
+| `main.rs` | Точка входа: разбор CLI, инициализация конфигурации, выбор транспорта, обработка сигналов завершения |
 
 ---
 
@@ -135,10 +138,10 @@ opengrok-core::infrastructure/
   │
   ▼
 opengrok-core::infrastructure/
-  └── format.rs                  ← очистка HTML, нормализация результата
+  └── format.rs                  ← очистка HTML, форматирование результата
   │
   ▼
-application.rs                   ← пагинация, формирование ответа с has_more
+application.rs                   ← пагинация, формирование ответа
   │
   ▼
 mcp/mod.rs                       ← сериализация в MCP-ответ
@@ -170,11 +173,12 @@ LLM-клиент
   в Docker-сборках на Alpine
 - `rustls-native-certs` обеспечивает интеграцию с системным хранилищем сертификатов при необходимости
 
-### Почему DashMap для кэша?
+### Почему Mutex<LruCache> для кэша?
 
-`DashMap` — конкурентная хэш-таблица: позволяет чтение без блокировок и мелкогранулярные
-блокировки для записи. Для MCP-сервера, обрабатывающего параллельные LLM-запросы, это
-избегает конкуренции, которую создал бы `Mutex<RwLock<HashMap>>`.
+Путь кэширования задействуется только при поисковых операциях — обычно это вызовы
+умеренной частоты. `Mutex<LruCache>` обеспечивает безопасный конкурентный доступ
+с LRU-вытеснением — проще и достаточно для данного паттерна доступа по сравнению
+с lock-free конкурентной картой.
 
 ### Почему governor для ограничения частоты?
 

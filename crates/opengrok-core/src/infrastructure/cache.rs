@@ -1,35 +1,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Copyright (C) 2026 Maxim Krutovercev (RD2W) <mkrutovercev@yandex.ru>
 
-//! In-memory cache with per-entry TTL.
+//! In-memory cache with per-entry TTL and LRU eviction.
 //!
-//! Uses [`dashmap`] for lock-free concurrent access and [`tokio::time`]
-//! for entry expiration. Entries are lazy-evicted: stale entries are
-//! detected on access and removed.
+//! Uses the [`lru`] crate for access-recency-aware eviction and a
+//! [`std::sync::Mutex`] for thread-safe interior mutability.  Entries
+//! carry insertion timestamps and are lazy-evicted on access when
+//! their TTL has elapsed.
 
+use std::num::NonZeroUsize;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use dashmap::DashMap;
-
-const EVICTION_FRACTION: f64 = 0.1;
+use lru::LruCache;
 
 // ---------------------------------------------------------------------------
 // Cache
 // ---------------------------------------------------------------------------
 
-/// A concurrent in-memory cache with per-entry time-to-live (TTL).
+/// A thread-safe in-memory cache with LRU eviction and per-entry TTL.
 ///
 /// Entries are stored with their insertion time and evicted lazily
-/// when accessed after expiration.
+/// when accessed after expiration.  When the cache is at capacity the
+/// least-recently-used entry (by access) is dropped before inserting
+/// a new one.
 #[derive(Debug, Clone)]
 pub struct MemoryCache<K, V>
 where
     K: Eq + std::hash::Hash + Clone,
     V: Clone,
 {
-    inner: DashMap<K, CacheEntry<V>>,
+    inner: Arc<Mutex<LruCache<K, CacheEntry<V>>>>,
     ttl: Duration,
-    max_entries: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -57,80 +59,78 @@ where
     V: Clone,
 {
     /// Creates a new cache with the given TTL and maximum entry count.
+    ///
+    /// Panics if `max_entries` is 0.
     #[must_use]
     pub fn new(ttl: Duration, max_entries: usize) -> Self {
+        let cap = NonZeroUsize::new(max_entries).expect("max_entries must be > 0");
         Self {
-            inner: DashMap::new(),
+            inner: Arc::new(Mutex::new(LruCache::new(cap))),
             ttl,
-            max_entries,
         }
     }
 
-    /// Inserts a value into the cache. If the cache is at capacity,
-    /// the oldest entry will be evicted as part of a periodic cleanup.
+    /// Inserts a value into the cache.  If the cache is at capacity the
+    /// least-recently-used entry is evicted first.
     pub fn insert(&self, key: K, value: V) {
-        // Evict if at capacity (lazy: remove ~10% of oldest entries)
-        if self.inner.len() >= self.max_entries {
-            self.evict_fraction(EVICTION_FRACTION);
-        }
-        self.inner.insert(key, CacheEntry::new(value));
+        self.inner
+            .lock()
+            .expect("cache lock poisoned")
+            .put(key, CacheEntry::new(value));
     }
 
-    /// Retrieves a cached value, returning `None` if the key is not
-    /// present or the entry has expired.
+    /// Retrieves a cached value.  Returns `None` if the key is absent
+    /// or the entry has expired.  After retrieving, the entry is promoted
+    /// as the most-recently-used.
     pub fn get(&self, key: &K) -> Option<V> {
-        let entry = self.inner.get(key)?;
+        let mut cache = self.inner.lock().expect("cache lock poisoned");
+
+        let entry = cache.get(key)?;
 
         if entry.is_expired(&self.ttl) {
-            // Lazy eviction: drop the read guard, then remove
-            drop(entry);
-            self.inner.remove(key);
+            cache.pop(key);
             return None;
         }
 
         Some(entry.value.clone())
     }
 
-    /// Removes a key from the cache.
+    /// Removes a key from the cache, returning its value if present.
     pub fn remove(&self, key: &K) -> Option<V> {
-        self.inner.remove(key).map(|(_, entry)| entry.value)
+        self.inner
+            .lock()
+            .expect("cache lock poisoned")
+            .pop(key)
+            .map(|entry| entry.value)
     }
 
     /// Returns the number of entries currently in the cache (including
     /// potentially stale ones that haven't been evicted yet).
     #[must_use]
     pub fn len(&self) -> usize {
-        self.inner.len()
+        self.inner.lock().expect("cache lock poisoned").len()
     }
 
     /// Returns `true` if the cache is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
+        self.len() == 0
     }
 
     /// Evicts all expired entries.
     pub fn evict_expired(&self) {
-        self.inner.retain(|_, entry| !entry.is_expired(&self.ttl));
-    }
+        let mut cache = self.inner.lock().expect("cache lock poisoned");
+        let ttl = self.ttl;
 
-    /// Evicts approximately `fraction` of all entries (0.0–1.0).
-    /// Only used when cache is at capacity; scale is [`EVICTION_FRACTION`].
-    fn evict_fraction(&self, fraction: f64) {
-        let count = (self.inner.len() as f64 * fraction).ceil() as usize;
-        if count == 0 {
-            return;
-        }
-
-        let mut removed = 0usize;
-        // Iterate and remove a subset
-        self.inner.retain(|_, _| {
-            if removed >= count {
-                return true;
+        let mut expired_keys = Vec::new();
+        for (key, entry) in cache.iter() {
+            if entry.is_expired(&ttl) {
+                expired_keys.push(key.clone());
             }
-            removed += 1;
-            false
-        });
+        }
+        for key in expired_keys {
+            cache.pop(&key);
+        }
     }
 }
 
@@ -183,17 +183,13 @@ mod tests {
 
     #[tokio::test]
     async fn entry_expires_after_ttl() {
-        // Use a very short TTL with real time (no pause/advance)
         let cache = MemoryCache::<String, String>::new(Duration::from_millis(10), 100);
         cache.insert("key".into(), "value".into());
 
-        // Fresh entry should be available
         assert!(cache.get(&"key".into()).is_some());
 
-        // Wait for TTL to expire
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // Entry should now be expired
         assert!(cache.get(&"key".into()).is_none());
         assert!(cache.is_empty(), "expired entry should be evicted");
     }
@@ -218,7 +214,30 @@ mod tests {
             cache.insert(i, i * 10);
         }
 
-        // After inserting 20 entries with max_entries=10, we should have ≤10
         assert!(cache.len() <= 10, "expected ≤10, got {}", cache.len());
+    }
+
+    #[test]
+    fn lru_eviction_respects_access_recency() {
+        let cache = MemoryCache::<i32, i32>::new(Duration::from_secs(3600), 3);
+
+        cache.insert(1, 10);
+        cache.insert(2, 20);
+        cache.insert(3, 30);
+
+        // Access key 1 — promotes it as most-recently-used
+        assert_eq!(cache.get(&1), Some(10));
+
+        // Insert key 4 — should evict key 2 (least-recently-used)
+        cache.insert(4, 40);
+
+        assert_eq!(
+            cache.get(&1),
+            Some(10),
+            "key 1 was accessed, should survive"
+        );
+        assert_eq!(cache.get(&3), Some(30), "key 3 should survive");
+        assert_eq!(cache.get(&4), Some(40), "key 4 was just inserted");
+        assert_eq!(cache.get(&2), None, "key 2 should be evicted (LRU)");
     }
 }

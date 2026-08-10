@@ -25,7 +25,7 @@ git checkout -b feat/my-feature
 ## Running tests
 
 ```bash
-# All tests (158 at time of writing)
+# All tests (184 at time of writing)
 cargo test --workspace
 
 # Specific crate

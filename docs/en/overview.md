@@ -17,7 +17,7 @@ large monorepos. OpenGrok provides a REST API for full-text search, file browsin
 history, and annotation, but its raw API is not LLM-friendly:
 
 - HTML tags in results (`<b>match</b>`) need stripping
-- Pagination needs to be handled and communicated to the LLM via `has_more` hints
+- Pagination needs to be handled and communicated to the LLM via result counts
 - Large result sets need capping and caching for latency
 - The API has quirks (`null` tags, empty `lineNumbers`) that need normalisation
 - Authentication and TLS with corporate CAs must be configured
@@ -49,7 +49,7 @@ needed.
 | **stdio** | Direct process launch: `docker exec`, Claude Desktop local subprocess, debugging |
 | **Streamable HTTP** | Network deployment: remote server, multiple clients, health checks, metrics |
 
-The `both` mode runs stdio and HTTP simultaneously.
+The `both` mode runs stdio and HTTP simultaneously (default).
 
 ### Flexible authentication
 
@@ -61,11 +61,16 @@ The `both` mode runs stdio and HTTP simultaneously.
 
 Credentials are **never** stored in the config file — only environment variable names.
 
+### MCP server-side token auth
+
+When `MCP_TOKEN` is set, the HTTP transport requires `Authorization: Bearer <token>`
+on every incoming MCP request (constant-time comparison, 401 on mismatch).
+
 ### TLS with custom CAs
 
 Corporate or self-signed CA certificates are supported through:
 
-- `OPENGROK_CA_CERT` / `SSL_CERT_FILE` — a single PEM file
+- `OPENGROK_CA_CERT` / `SSL_CERT_FILE` — a single PEM file (loaded in addition to system trust store)
 - `SSL_CERT_DIR` — a directory of certificate files
 - `config/certs/` directory (mounted read-only in Docker)
 
@@ -81,9 +86,9 @@ This prevents DNS rebinding attacks when the server is exposed on a network.
 |---|---|
 | **HTML tag stripping** | Removes `<b>` tags from search results — cleaner output for LLMs |
 | **Result capping** | `max_hits_per_file` limits matching lines per file |
-| **In-memory cache** | TTL-based cache with configurable size, avoids repeated API calls |
-| **Rate limiting** | Token-bucket limiter protects the OpenGrok backend from overload |
-| **Pagination hints** | `has_more` field in responses tells the LLM when more results are available |
+| **In-memory cache** | TTL-based LRU cache with configurable size, avoids repeated API calls |
+| **Rate limiting** | Token-bucket limiter (GCRA via `governor`) protects the OpenGrok backend from overload |
+| **Result formatting** | Consistent text output with counts, line numbers, and durations |
 
 ### Health & metrics
 
@@ -102,7 +107,7 @@ for local development and remote deployment.
 
 ## Current status
 
-**v1.0.0.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
-limiting, TLS, health endpoints, and Docker packaging are implemented and covered
-by **158 tests**. Supports MCP 2026-07-28 protocol (stateless Streamable HTTP,
-protocol negotiation) with legacy 2025-11-25 fallback.
+**v1.1.1.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
+limiting, TLS, MCP server-side token auth, health endpoints, and Docker packaging
+are implemented and covered by **170 tests**. Supports MCP 2026-07-28 protocol
+(stateless Streamable HTTP, protocol negotiation) with legacy 2025-11-25 fallback.

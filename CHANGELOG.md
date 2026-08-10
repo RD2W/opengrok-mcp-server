@@ -4,7 +4,49 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.0] — 2026-08-10
+
+### Added
+
+- **Environment variable overrides for all config fields**: every `[opengrok]`,
+  `[server]`, `[cache]`, and `[rate_limit]` setting can now be overridden via
+  `OPENGROK_*` / `MCP_SERVER_*` / `CACHE_*` / `RATE_LIMIT_*` env vars.
+- **Tool call metrics and LRU cache**: tool call counter, error counter, and
+  per-tool duration tracking; in-memory TTL cache replaced with LRU eviction
+  for bounded memory usage.
+
+### Fixed
+
+- **Bind to loopback by default**: server now listens on `127.0.0.1` instead of
+  `0.0.0.0`, preventing accidental external exposure.
+- **MCP token auth middleware**: token extraction and validation aligned with
+  gerrit-mcp-server pattern — simpler, more robust.
+- **Secrets redacted in `AuthMode::Debug`**: Bearer tokens no longer leak into
+  debug output.
+- **`list_project_files` fixed**: replaced recursive file tree API with
+  directory listing endpoint, avoiding explosions on large repositories.
+- **Response size guard**: responses exceeding 50 MiB are rejected with a
+  descriptive error instead of consuming unbounded memory.
+- **Increased timeout for large OpenGrok responses**: prevents premature
+  disconnection on slow or heavily-loaded backends.
+- **OpenGrok API wrapper objects**: `suggest` and `list_project_files` now
+  correctly parse JSON responses wrapped in `{results, ...}` objects.
+
+### Changed
+
+- **Token auth refactored**: shared MCP authentication service extracted and
+  simplified to match the established gerrit-mcp-server pattern.
+- **Module structure**: `mcp` and `domain` modules split into focused
+  sub-modules for better maintainability.
+- **Dependencies**: reqwest unpinned (0.13.4 → 0.13), lru upgraded (0.15 → 0.18).
+
+### Development
+
+- **CI**: Dependabot target-branch set to `dev`.
+- **Removed unused dev-dependencies**: `wiremock`, `tempfile` from crates where
+  they were not imported.
+- **Documentation**: config examples and `.env.example` rewritten in English;
+  README and docs synced with current defaults.
 
 ## [1.1.1] — 2026-08-09
 
@@ -128,4 +170,7 @@ All tools expose JSON Schema via `schemars` for MCP client consumption.
 
 Initial pre-release.
 
+[1.2.0]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.2.0
+[1.1.1]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.1.1
+[1.1.0]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.1.0
 [1.0.0]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.0.0

@@ -29,12 +29,11 @@ schemars.workspace = true
 thiserror.workspace = true
 serde_json.workspace = true
 clap = { version = "4", features = ["derive"] }
-chrono.workspace = true
+subtle.workspace = true
 
 [dev-dependencies]
-wiremock = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time"] }
-tempfile = { workspace = true }
+tower = { version = "0.5", features = ["util"] }
 
 [build-dependencies]
 chrono.workspace = true

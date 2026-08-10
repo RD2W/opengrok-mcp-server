@@ -17,23 +17,25 @@ opengrok-mcp-server/
 │   │       └── infrastructure/
 │   │           ├── client.rs  # HTTP client for OpenGrok REST API
 │   │           ├── tls.rs     # TLS configuration builder (rustls + native certs)
-│   │           ├── cache.rs   # In-memory TTL cache (DashMap)
+│   │           ├── cache.rs   # In-memory TTL cache (Mutex<LruCache>)
 │   │           ├── rate_limit.rs # Token-bucket rate limiter (governor)
-│   │           └── format.rs  # HTML tag stripping, result normalisation
+│   │           └── format.rs  # HTML tag stripping, result formatting
 │   └── opengrok-mcp/          # Binary — MCP server layer
 │       └── src/
 │           ├── main.rs        # Entry point, CLI args, logging init
 │           ├── config.rs      # TOML config loading + env var overrides
 │           ├── mcp/
 │           │   ├── mod.rs     # MCP server setup, tool dispatch
-│           │   └── tools.rs   # Tool definitions (JSON Schema via schemars)
+│           │   ├── tools.rs   # Tool definitions (JSON Schema via schemars)
+│           │   └── tools_impl/ # Tool handler implementations per category
 │           ├── transport/
-│           │   ├── mod.rs     # Transport abstraction
+│           │   ├── mod.rs     # Transport dispatch (stdio / http / both)
 │           │   ├── stdio.rs   # stdin/stdout transport
 │           │   └── http.rs    # Axum + rmcp Streamable HTTP transport
 │           └── health.rs      # /healthz, /readyz, /metrics endpoints
 ├── config/
 │   ├── config.example.toml    # Annotated configuration template
+│   ├── .env.example           # Environment variables reference
 │   ├── config.toml            # Your local config (gitignored)
 │   ├── .env                   # Secret env vars (gitignored)
 │   └── certs/                 # CA certificates for TLS (gitignored)
@@ -82,27 +84,28 @@ other contexts.
 
 ### `opengrok-core` — domain & infrastructure
 
-| Module | Lines | Purpose |
-|---|---|---|
-| `domain.rs` | 1206 | All data types: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, error types (`CoreError`) |
-| `application.rs` | 480 | High-level operations: `search()`, `get_file_content()`, `get_history()`, with pagination, caching, and formatting |
-| `infrastructure/client.rs` | 930 | `reqwest`-based HTTP client: request building, auth header injection, response parsing, OpenGrok quirk handling |
-| `infrastructure/tls.rs` | 476 | TLS configuration: custom CA loading, rustls setup, PEM parsing |
-| `infrastructure/format.rs` | 479 | HTML tag stripping (`<b>`, `<i>`, etc.), result text normalisation |
-| `infrastructure/cache.rs` | 221 | In-memory cache with TTL eviction using `DashMap` |
-| `infrastructure/rate_limit.rs` | 110 | Token-bucket rate limiter via `governor` |
+| Module | Purpose |
+|---|---|
+| `domain.rs` | All data types: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, error types (`DomainError`) |
+| `application.rs` | High-level operations: `search()`, `get_file_content()`, `get_history()`, with pagination, caching, and formatting |
+| `infrastructure/client.rs` | `reqwest`-based HTTP client: request building, auth header injection, response parsing, OpenGrok quirk handling |
+| `infrastructure/tls.rs` | TLS configuration: custom CA loading, rustls setup, PEM parsing |
+| `infrastructure/format.rs` | HTML tag stripping (`<b>`, `<i>`, etc.), result formatting for all response types |
+| `infrastructure/cache.rs` | In-memory cache with TTL eviction using `Mutex<LruCache>` |
+| `infrastructure/rate_limit.rs` | Token-bucket rate limiter via `governor` |
 
 ### `opengrok-mcp` — MCP server
 
-| Module | Lines | Purpose |
-|---|---|---|
-| `mcp/mod.rs` | 485 | MCP server initialisation, 25 tool handler dispatch, error mapping (`CoreError` → MCP error codes) |
-| `mcp/tools.rs` | 230 | Tool type definitions with JSON Schema (schemars): names, descriptions, parameter types, defaults (25 tools) |
-| `config.rs` | 466 | Config loading: TOML parsing, env var overrides, validation |
-| `transport/http.rs` | 67 | Axum router with `NeverSessionManager` (stateless, MCP 2026-07-28 protocol): MCP endpoint, health, readiness, metrics |
-| `transport/stdio.rs` | 20 | stdin/stdout transport via rmcp |
-| `health.rs` | 165 | Health check handlers: liveness, readiness with OpenGrok probe, Prometheus metrics collection |
-| `main.rs` | 124 | Entry point: CLI parsing, config init, transport selection, shutdown signal handling |
+| Module | Purpose |
+|---|---|
+| `mcp/mod.rs` | MCP server initialisation, 25 tool handler dispatch |
+| `mcp/tools.rs` | Tool parameter types with JSON Schema (schemars): names, descriptions, defaults (25 tools) |
+| `mcp/tools_impl/` | Tool handler implementations organised by category (search, content, history, metadata, system) |
+| `config.rs` | Config loading: TOML parsing, env var overrides, validation |
+| `transport/http.rs` | Axum router with `NeverSessionManager` (stateless, MCP 2026-07-28 protocol): MCP endpoint, health, readiness, metrics, MCP token auth middleware |
+| `transport/stdio.rs` | stdin/stdout transport via rmcp |
+| `health.rs` | Health check handlers: liveness, readiness with OpenGrok probe, Prometheus metrics collection |
+| `main.rs` | Entry point: CLI parsing, config init, transport selection, shutdown signal handling |
 
 ---
 
@@ -135,10 +138,10 @@ opengrok-core::infrastructure/
   │
   ▼
 opengrok-core::infrastructure/
-  └── format.rs                  ← strip HTML, normalise result
+  └── format.rs                  ← strip HTML, format result
   │
   ▼
-application.rs                   ← paginate, build response with has_more
+application.rs                   ← paginate, build response
   │
   ▼
 mcp/mod.rs                       ← serialize to MCP response
@@ -170,11 +173,12 @@ dependencies out of the core HTTP client. This means:
   Docker Alpine builds
 - `rustls-native-certs` provides integration with the system trust store when needed
 
-### Why DashMap for cache?
+### Why Mutex<LruCache> for cache?
 
-`DashMap` is a concurrent hashmap — it allows lock-free reads and fine-grained
-locking for writes. For an MCP server handling parallel LLM requests, this avoids
-contention that a `Mutex<RwLock<HashMap>>` would create.
+The cache path is only taken during search operations, which are typically
+moderate-frequency calls. A `Mutex<LruCache>` provides safe concurrent access
+with LRU-aware eviction — simpler and adequate for this access pattern compared
+to a lock-free concurrent map.
 
 ### Why governor for rate limiting?
 

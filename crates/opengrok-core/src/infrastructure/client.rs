@@ -42,13 +42,14 @@ const HEADER_ACCEPT: &str = "Accept";
 const HEADER_OCTET_STREAM: &str = "application/octet-stream";
 
 const MAX_BODY_TRUNCATION: usize = 500;
+const MAX_RESPONSE_BYTES: u64 = 50 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Auth configuration
 // ---------------------------------------------------------------------------
 
 /// Authentication mode for connecting to OpenGrok.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum AuthMode {
     /// No authentication.
     None,
@@ -56,6 +57,20 @@ pub enum AuthMode {
     Bearer(String),
     /// HTTP Basic authentication.
     Basic { username: String, password: String },
+}
+
+impl std::fmt::Debug for AuthMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => f.debug_tuple("None").finish(),
+            Self::Bearer(_) => f.debug_tuple("Bearer").field(&"[redacted]").finish(),
+            Self::Basic { username, .. } => f
+                .debug_struct("Basic")
+                .field("username", username)
+                .field("password", &"[redacted]")
+                .finish(),
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +185,18 @@ impl OpengrokClient {
         query: &[(&str, &str)],
     ) -> Result<T, DomainError> {
         let response = self.get(path, query).await?;
+
+        if let Some(len) = response.content_length()
+            && len > MAX_RESPONSE_BYTES
+        {
+            return Err(DomainError::Decode(serde_json::Error::io(
+                io::Error::other(format!(
+                    "response too large: {len} bytes (limit: {MAX_RESPONSE_BYTES} bytes). \
+                     Try narrowing the query with a more specific project or path."
+                )),
+            )));
+        }
+
         let body = response.text().await.map_err(|e| {
             DomainError::Decode(serde_json::Error::io(io::Error::other(format!(
                 "failed to read response body: {e}"
@@ -282,8 +309,8 @@ impl OpengrokRepository for OpengrokClient {
             params.push(("type", v.clone()));
         }
 
-        let suggestions: Vec<Suggestion> = self.get_json(API_SUGGEST, &param_refs(&params)).await?;
-        Ok(suggestions)
+        let response: SuggestResponseDto = self.get_json(API_SUGGEST, &param_refs(&params)).await?;
+        Ok(response.suggestions)
     }
 
     async fn get_file_content(
@@ -371,11 +398,6 @@ impl OpengrokRepository for OpengrokClient {
 
     async fn get_group_projects(&self, group: &str) -> Result<Vec<String>, DomainError> {
         let path = format!("groups/{group}/allprojects");
-        self.get_json(&path, &[]).await
-    }
-
-    async fn list_project_files(&self, project: &str) -> Result<Vec<String>, DomainError> {
-        let path = format!("projects/{project}/files");
         self.get_json(&path, &[]).await
     }
 
@@ -941,7 +963,7 @@ mod tests {
             assert!(first.contains("caret=5"));
             assert!(first.contains("full=fn"));
 
-            let body = r#"[{"phrase":"func","projects":[],"score":100}]"#;
+            let body = r#"{"suggestions":[{"phrase":"func","projects":[],"score":100}]}"#;
             let resp = format!(
                 "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
                 body.len()
@@ -965,6 +987,40 @@ mod tests {
         let suggestions = client.suggest(&req).await.unwrap();
         assert_eq!(suggestions.len(), 1);
         assert_eq!(suggestions[0].phrase, "func");
+    }
+
+    #[tokio::test]
+    async fn suggest_empty_response() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let (_first, _headers) = read_request(&mut stream).await;
+
+            let body = r#"{"suggestions":[],"time":0,"identifier":"x","queryText":"x","partialResult":false}"#;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(resp.as_bytes()).await.unwrap();
+            stream.shutdown().await.unwrap();
+        });
+
+        let client = test_client(addr.port());
+        let req = SuggestRequest {
+            projects: vec!["myproj".into()],
+            field: "full".into(),
+            caret: 0,
+            full: Some("nonexistent".into()),
+            defs: None,
+            refs: None,
+            path: None,
+            hist: None,
+            file_type: None,
+        };
+        let suggestions = client.suggest(&req).await.unwrap();
+        assert!(suggestions.is_empty());
     }
 
     // -- New endpoints: groups ----------------------------------------------
@@ -1015,32 +1071,6 @@ mod tests {
         let client = test_client(addr.port());
         let projects = client.get_group_projects("mygroup").await.unwrap();
         assert_eq!(projects, vec!["proj1", "proj2"]);
-    }
-
-    // -- New endpoints: projects extra --------------------------------------
-
-    #[tokio::test]
-    async fn list_project_files_returns_array() {
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-
-        tokio::spawn(async move {
-            let (mut stream, _) = listener.accept().await.unwrap();
-            let (first, _headers) = read_request(&mut stream).await;
-            assert!(first.contains("GET /api/v1/projects/myproj/files"));
-
-            let body = r#"["src/main.rs","src/lib.rs"]"#;
-            let resp = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{body}",
-                body.len()
-            );
-            stream.write_all(resp.as_bytes()).await.unwrap();
-            stream.shutdown().await.unwrap();
-        });
-
-        let client = test_client(addr.port());
-        let files = client.list_project_files("myproj").await.unwrap();
-        assert_eq!(files, vec!["src/main.rs", "src/lib.rs"]);
     }
 
     #[tokio::test]

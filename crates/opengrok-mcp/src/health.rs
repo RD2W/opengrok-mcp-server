@@ -63,17 +63,14 @@ impl Metrics {
         }
     }
 
-    #[allow(dead_code)] // wired into tool handlers later
     pub fn record_tool_call(&self) {
         self.tool_calls_total.fetch_add(1, Ordering::Relaxed);
     }
 
-    #[allow(dead_code)]
     pub fn record_tool_error(&self) {
         self.tool_calls_errors.fetch_add(1, Ordering::Relaxed);
     }
 
-    #[allow(dead_code)]
     pub fn record_search(&self) {
         self.search_queries_total.fetch_add(1, Ordering::Relaxed);
     }
