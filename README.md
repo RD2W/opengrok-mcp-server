@@ -316,7 +316,7 @@ allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp", "opengrok-mcp:8004"]
 ### Разработка
 
 ```bash
-cargo test                    # 170 тестов
+cargo test                    # 184 тестов
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```

@@ -70,7 +70,7 @@ cargo run --release
 # Задайте учётные данные в config/.env (см. config/.env.example):
 #   OPENGROK_TOKEN=ваш-токен
 #   OPENGROK_URL=https://opengrok.example.com
-#   MCP_TOKEN=shared-secret        # опционально, для защиты MCP-сервера
+#   MCP_AUTH_TOKEN=shared-secret        # опционально, для защиты MCP-сервера
 
 docker compose up -d
 ```
@@ -93,7 +93,7 @@ docker compose up -d
 docker pull rd2w/opengrok-mcp:latest
 
 # Или конкретной версии
-docker pull rd2w/opengrok-mcp:v1.1.1
+docker pull rd2w/opengrok-mcp:v1.2.0
 
 # Используйте docker-compose файл для готовых образов
 docker compose -f docker-compose.hub.yml up -d

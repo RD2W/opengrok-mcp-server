@@ -63,7 +63,7 @@ Credentials are **never** stored in the config file — only environment variabl
 
 ### MCP server-side token auth
 
-When `MCP_TOKEN` is set, the HTTP transport requires `Authorization: Bearer <token>`
+When `MCP_AUTH_TOKEN` is set, the HTTP transport requires `Authorization: Bearer <token>`
 on every incoming MCP request (constant-time comparison, 401 on mismatch).
 
 ### TLS with custom CAs
@@ -107,7 +107,7 @@ for local development and remote deployment.
 
 ## Current status
 
-**v1.1.1.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
+**v1.2.0.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
 limiting, TLS, MCP server-side token auth, health endpoints, and Docker packaging
-are implemented and covered by **170 tests**. Supports MCP 2026-07-28 protocol
+are implemented and covered by **184 tests**. Supports MCP 2026-07-28 protocol
 (stateless Streamable HTTP, protocol negotiation) with legacy 2025-11-25 fallback.
