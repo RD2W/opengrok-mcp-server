@@ -4,6 +4,37 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] — 2026-08-19
+
+### Fixed
+
+- **Container health restored** — the Dockerfile now exposes `HEALTHCHECK_PORT`
+  (default `8080`) and `HEALTHCHECK_PATH` (default `/healthz`) as build args / env
+  vars. The image healthcheck probes `127.0.0.1:${HEALTHCHECK_PORT}${HEALTHCHECK_PATH}`
+  inside the container, so overriding `bind_addr` no longer leaves the container
+  reporting `unhealthy`.
+
+### Added
+
+- **Makefile** — `make dev`, `make docker-build`, `make docker-push`, `make test`
+  and related targets for local development and Docker workflows.
+
+### Tests
+
+- **Health endpoint contract tests** — integration coverage for `/healthz`,
+  `/readyz`, and `/metrics` on the Streamable HTTP transport.
+
+### Changed
+
+- **34 dependency updates** to latest semver-compatible versions (rmcp 3.1.3,
+  futures 0.3.34, quinn-proto, rustls-webpki, icu 2.3, uuid, etc.).
+
+### Documentation
+
+- Fixed the `MCP_AUTH_TOKEN` env var name in docs (was `MCP_TOKEN`).
+- Status/version references updated (v1.1.1 → v1.2.1, test count 170 → 184) in
+  EN/RU overview, installation, and README.
+
 ## [1.2.0] — 2026-08-10
 
 ### Added
@@ -170,6 +201,7 @@ All tools expose JSON Schema via `schemars` for MCP client consumption.
 
 Initial pre-release.
 
+[1.2.1]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.2.1
 [1.2.0]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.2.0
 [1.1.1]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.1.1
 [1.1.0]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.1.0

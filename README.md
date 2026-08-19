@@ -59,6 +59,9 @@ Pre-built multi-arch images (linux/amd64, linux/arm64) are available on
 # Pull the latest release
 docker pull rd2w/opengrok-mcp:latest
 
+# Or from GitHub Container Registry
+docker pull ghcr.io/rd2w/opengrok-mcp-server:latest
+
 # Use the docker-compose file for pre-built images
 docker compose -f docker-compose.hub.yml up -d
 
@@ -109,15 +112,15 @@ docker compose up -d
 
 See `config/config.example.toml` for all options. Key sections:
 
-| Section | Purpose |
-|---|---|---|
-| `[opengrok]` | Base URL, timeout (30s), TLS (custom CA cert, verify_ssl) |
-| `[opengrok.auth]` | `token` / `basic` / `none`, env var names for credentials |
-| `[service]` | HTML stripping, result caps (`max_hits_per_file`, `default_max_results`) |
-| `[cache]` | In-memory TTL LRU cache (`Mutex<LruCache>`) for repeated searches |
-| `[rate_limit]` | Token-bucket rate limiter (GCRA via `governor`, protects OpenGrok) |
-| `[transport]` | Transport mode (`both` by default), bind address (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
-| `[log]` | Log level (`RUST_LOG` overrides) |
+| Section           | Purpose                                                                                                |
+|-------------------|--------------------------------------------------------------------------------------------------------|
+| `[opengrok]`      | Base URL, timeout (30s), TLS (custom CA cert, verify_ssl)                                              |
+| `[opengrok.auth]` | `token` / `basic` / `none`, env var names for credentials                                              |
+| `[service]`       | HTML stripping, result caps (`max_hits_per_file`, `default_max_results`)                               |
+| `[cache]`         | In-memory TTL LRU cache (`Mutex<LruCache>`) for repeated searches                                      |
+| `[rate_limit]`    | Token-bucket rate limiter (GCRA via `governor`, protects OpenGrok)                                     |
+| `[transport]`     | Transport mode (`both` by default), bind address (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
+| `[log]`           | Log level (`RUST_LOG` overrides)                                                                       |
 
 #### MCP server-side token auth
 
@@ -221,6 +224,9 @@ docker compose up -d
 # Загрузка последнего релиза
 docker pull rd2w/opengrok-mcp:latest
 
+# Или из GitHub Container Registry
+docker pull ghcr.io/rd2w/opengrok-mcp-server:latest
+
 # Используйте docker-compose файл для готовых образов
 docker compose -f docker-compose.hub.yml up -d
 
@@ -271,15 +277,15 @@ docker compose up -d
 
 Все опции в `config/config.example.toml`. Основные секции:
 
-| Секция | Назначение |
-|---|---|---|
-| `[opengrok]` | Базовый URL, таймаут (30с), TLS (пользовательский CA-сертификат, verify_ssl) |
-| `[opengrok.auth]` | `token` / `basic` / `none`, имена переменных окружения для учётных данных |
-| `[service]` | Очистка HTML, лимиты результатов (`max_hits_per_file`, `default_max_results`) |
-| `[cache]` | TTL LRU-кэш в памяти (`Mutex<LruCache>`) для повторных поисков |
-| `[rate_limit]` | Ограничитель частоты token bucket (GCRA через `governor`, защищает OpenGrok) |
-| `[transport]` | Режим транспорта (`both` по умолчанию), адрес (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
-| `[log]` | Уровень логирования (переопределяется `RUST_LOG`) |
+| Секция            | Назначение                                                                                          |
+|-------------------|-----------------------------------------------------------------------------------------------------|
+| `[opengrok]`      | Базовый URL, таймаут (30с), TLS (пользовательский CA-сертификат, verify_ssl)                        |
+| `[opengrok.auth]` | `token` / `basic` / `none`, имена переменных окружения для учётных данных                           |
+| `[service]`       | Очистка HTML, лимиты результатов (`max_hits_per_file`, `default_max_results`)                       |
+| `[cache]`         | TTL LRU-кэш в памяти (`Mutex<LruCache>`) для повторных поисков                                      |
+| `[rate_limit]`    | Ограничитель частоты token bucket (GCRA через `governor`, защищает OpenGrok)                        |
+| `[transport]`     | Режим транспорта (`both` по умолчанию), адрес (`127.0.0.1:8080`), `allowed_hosts`, `mcp_auth_token` |
+| `[log]`           | Уровень логирования (переопределяется `RUST_LOG`)                                                   |
 
 #### Токен-аутентификация MCP-сервера
 

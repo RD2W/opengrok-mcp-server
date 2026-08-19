@@ -93,7 +93,7 @@ tagged release.
 docker pull rd2w/opengrok-mcp:latest
 
 # Or a specific version
-docker pull rd2w/opengrok-mcp:v1.2.0
+docker pull rd2w/opengrok-mcp:v1.2.1
 
 # Use the docker-compose file for pre-built images
 docker compose -f docker-compose.hub.yml up -d
