@@ -76,23 +76,15 @@ pub async fn run_http<R: OpengrokRepository + Send + Sync + 'static>(
     let http_path = config.transport.http_path.clone();
     let bind_addr = config.transport.bind_addr.clone();
 
-    let mut mcp_routes = Router::new().nest_service(&http_path, mcp_service);
+    let mcp_routes = Router::new().nest_service(&http_path, mcp_service);
 
-    if !config.transport.mcp_auth_token.is_empty() {
-        let token: Arc<str> = config.transport.mcp_auth_token.clone().into();
-        let middleware_fn = move |req: Request, next: Next| {
-            let token = Arc::clone(&token);
-            mcp_token_auth(req, next, token)
-        };
-        mcp_routes = mcp_routes.layer(middleware::from_fn(middleware_fn));
-        tracing::info!("MCP token auth enabled");
-    }
-
-    let app = Router::new()
-        .merge(mcp_routes)
-        .route(&health_path, get(health_handler))
-        .route(&ready_path, get(ready_handler))
-        .route(&metrics_path, get(metrics_handler));
+    let app = build_app(
+        mcp_routes,
+        &health_path,
+        &ready_path,
+        &metrics_path,
+        &config.transport.mcp_auth_token,
+    );
 
     tracing::info!(%bind_addr, %http_path, "starting Streamable HTTP transport");
 
@@ -104,6 +96,33 @@ pub async fn run_http<R: OpengrokRepository + Send + Sync + 'static>(
         .await?;
 
     Ok(())
+}
+
+/// Builds the axum app: MCP routes (optionally token-protected) plus public
+/// health/ready/metrics endpoints.
+fn build_app(
+    mcp_routes: Router,
+    health_path: &str,
+    ready_path: &str,
+    metrics_path: &str,
+    mcp_auth_token: &str,
+) -> Router {
+    let mut mcp_routes = mcp_routes;
+    if !mcp_auth_token.is_empty() {
+        let token: Arc<str> = mcp_auth_token.into();
+        let middleware_fn = move |req: Request, next: Next| {
+            let token = Arc::clone(&token);
+            mcp_token_auth(req, next, token)
+        };
+        mcp_routes = mcp_routes.layer(middleware::from_fn(middleware_fn));
+        tracing::info!("MCP token auth enabled");
+    }
+
+    Router::new()
+        .merge(mcp_routes)
+        .route(health_path, get(health_handler))
+        .route(ready_path, get(ready_handler))
+        .route(metrics_path, get(metrics_handler))
 }
 
 // ---------------------------------------------------------------------------
@@ -188,5 +207,50 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn token_auth_protects_mcp_but_keeps_health_public() {
+        use axum::body::Body;
+        use axum::http::header::AUTHORIZATION;
+        let app = build_app(
+            Router::new().route("/mcp", get(|| async { "ok" })),
+            "/healthz",
+            "/readyz",
+            "/metrics",
+            "secret",
+        );
+
+        let health_no_token = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/healthz")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(health_no_token.status(), StatusCode::OK);
+
+        let mcp_no_token = app
+            .clone()
+            .oneshot(Request::builder().uri("/mcp").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(mcp_no_token.status(), StatusCode::UNAUTHORIZED);
+
+        let mcp_with_token = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .uri("/mcp")
+                    .header(AUTHORIZATION, "Bearer secret")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(mcp_with_token.status(), StatusCode::OK);
     }
 }

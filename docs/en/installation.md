@@ -70,10 +70,17 @@ The server starts in `both` mode by default (stdio + HTTP on `127.0.0.1:8080`).
 # Set credentials in config/.env (see config/.env.example):
 #   OPENGROK_TOKEN=your-token
 #   OPENGROK_URL=https://opengrok.example.com
-#   MCP_TOKEN=shared-secret        # optional, for MCP server auth
+#   MCP_AUTH_TOKEN=shared-secret        # optional, for MCP server auth
 
 docker compose up -d
 ```
+
+> **Note:** the container healthcheck probes `127.0.0.1:${HEALTHCHECK_PORT}${HEALTHCHECK_PATH}`
+> (default `8080/healthz`) *inside* the container. If you change the server
+> `bind_addr` port in the config, override `HEALTHCHECK_PORT` (and
+> `HEALTHCHECK_PATH` if needed) in the compose file under `environment:` —
+> otherwise the container reports `unhealthy` despite a running server.
+> The `ports:` mapping only affects host access and does not influence the healthcheck.
 
 ### Docker Hub (pre-built image)
 
@@ -86,7 +93,7 @@ tagged release.
 docker pull rd2w/opengrok-mcp:latest
 
 # Or a specific version
-docker pull rd2w/opengrok-mcp:v1.1.1
+docker pull rd2w/opengrok-mcp:v1.2.1
 
 # Use the docker-compose file for pre-built images
 docker compose -f docker-compose.hub.yml up -d
