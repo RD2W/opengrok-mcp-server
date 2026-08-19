@@ -34,6 +34,8 @@ FROM alpine:3.24
 ARG HEALTHCHECK_PORT=8080
 ARG HEALTHCHECK_PATH=/healthz
 ARG CONFIG_DIR=/config
+ENV HEALTHCHECK_PORT=${HEALTHCHECK_PORT}
+ENV HEALTHCHECK_PATH=${HEALTHCHECK_PATH}
 
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /build/target/release/opengrok-mcp /usr/local/bin/opengrok-mcp
@@ -43,7 +45,7 @@ USER appuser
 VOLUME ["${CONFIG_DIR}"]
 
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-    CMD wget -qO- http://localhost:${HEALTHCHECK_PORT}${HEALTHCHECK_PATH} || exit 1
+    CMD wget -qO- http://127.0.0.1:${HEALTHCHECK_PORT}${HEALTHCHECK_PATH} || exit 1
 
 LABEL org.opencontainers.image.title="opengrok-mcp" \
       org.opencontainers.image.description="MCP server for OpenGrok code search (AOSP-scale codebases)" \

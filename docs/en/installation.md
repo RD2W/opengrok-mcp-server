@@ -75,6 +75,13 @@ The server starts in `both` mode by default (stdio + HTTP on `127.0.0.1:8080`).
 docker compose up -d
 ```
 
+> **Note:** the container healthcheck probes `127.0.0.1:${HEALTHCHECK_PORT}${HEALTHCHECK_PATH}`
+> (default `8080/healthz`) *inside* the container. If you change the server
+> `bind_addr` port in the config, override `HEALTHCHECK_PORT` (and
+> `HEALTHCHECK_PATH` if needed) in the compose file under `environment:` —
+> otherwise the container reports `unhealthy` despite a running server.
+> The `ports:` mapping only affects host access and does not influence the healthcheck.
+
 ### Docker Hub (pre-built image)
 
 Pre-built multi-arch images (linux/amd64, linux/arm64) are published to

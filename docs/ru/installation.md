@@ -75,6 +75,13 @@ cargo run --release
 docker compose up -d
 ```
 
+> **Примечание:** healthcheck контейнера проверяет `127.0.0.1:${HEALTHCHECK_PORT}${HEALTHCHECK_PATH}`
+> (по умолчанию `8080/healthz`) *внутри* контейнера. Если вы измените порт
+> `bind_addr` в конфиге, переопределите `HEALTHCHECK_PORT` (и при необходимости
+> `HEALTHCHECK_PATH`) в compose-файле в секции `environment:` — иначе контейнер
+> будет сообщать `unhealthy`, хотя сервер работает. Маппинг `ports:` влияет только
+> на доступ с хоста и на healthcheck не влияет.
+
 ### Docker Hub (готовый образ)
 
 Готовые multi-arch образы (linux/amd64, linux/arm64) публикуются на
