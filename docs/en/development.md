@@ -45,12 +45,12 @@ cargo test -- --ignored
 
 CI runs on every push to `dev`, `main`, and `ci` branches, and on all PRs:
 
-| Job | Command | Purpose |
-|---|---|---|
-| Format | `cargo fmt --all -- --check` | Ensures consistent code style |
+| Job    | Command                                                 | Purpose                                  |
+|--------|---------------------------------------------------------|------------------------------------------|
+| Format | `cargo fmt --all -- --check`                            | Ensures consistent code style            |
 | Clippy | `cargo clippy --workspace --all-targets -- -D warnings` | Catches common mistakes and style issues |
-| Tests | `cargo test --workspace --locked` | Runs all unit and integration tests |
-| Build | `cargo build --workspace --locked --release` | Verifies the release build compiles |
+| Tests  | `cargo test --workspace --locked`                       | Runs all unit and integration tests      |
+| Build  | `cargo build --workspace --locked --release`            | Verifies the release build compiles      |
 
 GitHub Actions workflow: `.github/workflows/ci.yml`
 

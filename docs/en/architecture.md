@@ -84,28 +84,28 @@ other contexts.
 
 ### `opengrok-core` — domain & infrastructure
 
-| Module | Purpose |
-|---|---|
-| `domain.rs` | All data types: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, error types (`DomainError`) |
-| `application.rs` | High-level operations: `search()`, `get_file_content()`, `get_history()`, with pagination, caching, and formatting |
-| `infrastructure/client.rs` | `reqwest`-based HTTP client: request building, auth header injection, response parsing, OpenGrok quirk handling |
-| `infrastructure/tls.rs` | TLS configuration: custom CA loading, rustls setup, PEM parsing |
-| `infrastructure/format.rs` | HTML tag stripping (`<b>`, `<i>`, etc.), result formatting for all response types |
-| `infrastructure/cache.rs` | In-memory cache with TTL eviction using `Mutex<LruCache>` |
-| `infrastructure/rate_limit.rs` | Token-bucket rate limiter via `governor` |
+| Module                         | Purpose                                                                                                                 |
+|--------------------------------|-------------------------------------------------------------------------------------------------------------------------|
+| `domain.rs`                    | All data types: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, error types (`DomainError`) |
+| `application.rs`               | High-level operations: `search()`, `get_file_content()`, `get_history()`, with pagination, caching, and formatting      |
+| `infrastructure/client.rs`     | `reqwest`-based HTTP client: request building, auth header injection, response parsing, OpenGrok quirk handling         |
+| `infrastructure/tls.rs`        | TLS configuration: custom CA loading, rustls setup, PEM parsing                                                         |
+| `infrastructure/format.rs`     | HTML tag stripping (`<b>`, `<i>`, etc.), result formatting for all response types                                       |
+| `infrastructure/cache.rs`      | In-memory cache with TTL eviction using `Mutex<LruCache>`                                                               |
+| `infrastructure/rate_limit.rs` | Token-bucket rate limiter via `governor`                                                                                |
 
 ### `opengrok-mcp` — MCP server
 
-| Module | Purpose |
-|---|---|
-| `mcp/mod.rs` | MCP server initialisation, 25 tool handler dispatch |
-| `mcp/tools.rs` | Tool parameter types with JSON Schema (schemars): names, descriptions, defaults (25 tools) |
-| `mcp/tools_impl/` | Tool handler implementations organised by category (search, content, history, metadata, system) |
-| `config.rs` | Config loading: TOML parsing, env var overrides, validation |
-| `transport/http.rs` | Axum router with `NeverSessionManager` (stateless, MCP 2026-07-28 protocol): MCP endpoint, health, readiness, metrics, MCP token auth middleware |
-| `transport/stdio.rs` | stdin/stdout transport via rmcp |
-| `health.rs` | Health check handlers: liveness, readiness with OpenGrok probe, Prometheus metrics collection |
-| `main.rs` | Entry point: CLI parsing, config init, transport selection, shutdown signal handling |
+| Module               | Purpose                                                                                                                                          |
+|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|
+| `mcp/mod.rs`         | MCP server initialisation, 25 tool handler dispatch                                                                                              |
+| `mcp/tools.rs`       | Tool parameter types with JSON Schema (schemars): names, descriptions, defaults (25 tools)                                                       |
+| `mcp/tools_impl/`    | Tool handler implementations organised by category (search, content, history, metadata, system)                                                  |
+| `config.rs`          | Config loading: TOML parsing, env var overrides, validation                                                                                      |
+| `transport/http.rs`  | Axum router with `NeverSessionManager` (stateless, MCP 2026-07-28 protocol): MCP endpoint, health, readiness, metrics, MCP token auth middleware |
+| `transport/stdio.rs` | stdin/stdout transport via rmcp                                                                                                                  |
+| `health.rs`          | Health check handlers: liveness, readiness with OpenGrok probe, Prometheus metrics collection                                                    |
+| `main.rs`            | Entry point: CLI parsing, config init, transport selection, shutdown signal handling                                                             |
 
 ---
 

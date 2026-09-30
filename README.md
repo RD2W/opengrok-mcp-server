@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/RD2W/opengrok-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/RD2W/opengrok-mcp-server/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/RD2W/opengrok-mcp-server?color=blue)](https://github.com/RD2W/opengrok-mcp-server/releases)
-[![Rust](https://img.shields.io/badge/rust-1.97%2B-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-1.98%2B-orange.svg)](https://www.rust-lang.org)
 [![Edition](https://img.shields.io/badge/edition-2024-blue.svg)](https://doc.rust-lang.org/edition-guide/rust-2024/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green.svg)](LICENSE)
 
@@ -156,7 +156,7 @@ Full documentation is available in `docs/en/`:
 ### Development
 
 ```bash
-cargo test                    # 184 tests
+cargo test                    # 185 tests
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```
@@ -322,7 +322,7 @@ allowed_hosts = ["localhost", "127.0.0.1", "opengrok-mcp", "opengrok-mcp:8004"]
 ### Разработка
 
 ```bash
-cargo test                    # 184 тестов
+cargo test                    # 185 тестов
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 ```

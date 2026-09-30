@@ -63,8 +63,8 @@ impl<R: OpengrokRepository + Send + Sync + 'static> OpengrokServer<R> {
 
 #[rmcp::tool_handler]
 impl<R: OpengrokRepository + Send + Sync + 'static> ServerHandler for OpengrokServer<R> {
-    fn get_info(&self) -> ServerInfo {
-        let mut info = ServerInfo::new(ServerCapabilities::builder().enable_tools().build());
+    fn get_info(&self) -> ServerConfig {
+        let mut info = ServerConfig::new(ServerCapabilities::builder().enable_tools().build());
         info.instructions = Some(
             "OpenGrok MCP server for AOSP-scale code search. \
              Use search_code for full-text queries, search_definition \
@@ -82,6 +82,7 @@ impl<R: OpengrokRepository + Send + Sync + 'static> ServerHandler for OpengrokSe
     }
 
     fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
-        Cow::Borrowed(&[ProtocolVersion::V_2026_07_28, ProtocolVersion::V_2025_11_25])
+        const MAX_SUPPORTED: ProtocolVersion = ProtocolVersion::V_2026_07_28;
+        Cow::Borrowed(ProtocolVersion::known_up_to(&MAX_SUPPORTED))
     }
 }

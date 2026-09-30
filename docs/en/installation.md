@@ -7,7 +7,7 @@ Previous: [← Overview](./overview.md)
 
 ## Requirements
 
-- **Rust** 1.97 or later (edition 2024)
+- **Rust** 1.98 or later (edition 2024)
 - **OpenGrok** instance accessible over HTTP(S)
 - **Docker** (optional — for containerised deployment)
 
@@ -93,7 +93,7 @@ tagged release.
 docker pull rd2w/opengrok-mcp:latest
 
 # Or a specific version
-docker pull rd2w/opengrok-mcp:v1.2.1
+docker pull rd2w/opengrok-mcp:v1.2.2
 
 # Use the docker-compose file for pre-built images
 docker compose -f docker-compose.hub.yml up -d

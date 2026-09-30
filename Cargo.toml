@@ -3,9 +3,9 @@ resolver = "2"
 members = ["crates/opengrok-core", "crates/opengrok-mcp"]
 
 [workspace.package]
-version = "1.2.1"
+version = "1.2.2"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.98"
 license = "GPL-3.0-or-later"
 authors = ["RD2W <mkrutovercev@yandex.ru>"]
 
@@ -21,7 +21,6 @@ governor = "0.10"
 lru = "0.18"
 rustls = "0.23"
 rustls-native-certs = "0.8"
-rustls-pemfile = "2"
 subtle = "2"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "sync", "time", "signal"] }
 chrono = "0.4"
@@ -29,6 +28,10 @@ chrono = "0.4"
 # Binary dependencies
 rmcp = { version = "3", default-features = false, features = ["server", "macros", "transport-io", "transport-streamable-http-server", "schemars", "base64"] }
 schemars = "1"
+# matchit is pinned to =0.8.4 by axum 0.8.x (latest release) and cannot be
+# updated independently. axum main already bumps it to matchit 0.9.2, so this
+# resolves automatically once axum 0.9 is released.
+# See: https://github.com/tokio-rs/axum (axum/Cargo.toml, main branch)
 axum = "0.8"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 toml = "1"
