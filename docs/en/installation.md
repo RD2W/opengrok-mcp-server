@@ -7,7 +7,7 @@ Previous: [← Overview](./overview.md)
 
 ## Requirements
 
-- **Rust** 1.97 or later (edition 2024)
+- **Rust** 1.98 or later (edition 2024)
 - **OpenGrok** instance accessible over HTTP(S)
 - **Docker** (optional — for containerised deployment)
 

@@ -4,7 +4,7 @@
 # Multi-stage Docker build for opengrok-mcp
 
 # Stage 1: Build
-FROM rust:1.97.1-alpine3.24 AS builder
+FROM rust:1.98.1-alpine3.24 AS builder
 RUN apk add --no-cache musl-dev pkgconf upx
 WORKDIR /build
 

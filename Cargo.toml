@@ -5,7 +5,7 @@ members = ["crates/opengrok-core", "crates/opengrok-mcp"]
 [workspace.package]
 version = "1.2.1"
 edition = "2024"
-rust-version = "1.97"
+rust-version = "1.98"
 license = "GPL-3.0-or-later"
 authors = ["RD2W <mkrutovercev@yandex.ru>"]
 

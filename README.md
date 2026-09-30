@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/RD2W/opengrok-mcp-server/actions/workflows/ci.yml/badge.svg)](https://github.com/RD2W/opengrok-mcp-server/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/RD2W/opengrok-mcp-server?color=blue)](https://github.com/RD2W/opengrok-mcp-server/releases)
-[![Rust](https://img.shields.io/badge/rust-1.97%2B-orange.svg)](https://www.rust-lang.org)
+[![Rust](https://img.shields.io/badge/rust-1.98%2B-orange.svg)](https://www.rust-lang.org)
 [![Edition](https://img.shields.io/badge/edition-2024-blue.svg)](https://doc.rust-lang.org/edition-guide/rust-2024/)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-green.svg)](LICENSE)
 
