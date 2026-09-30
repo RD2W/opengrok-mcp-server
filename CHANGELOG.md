@@ -4,6 +4,42 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project aims to
 follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] — 2026-09-30
+
+### Changed
+
+- **MSRV raised to Rust 1.98** (`rust-version = "1.98"`); the Docker builder image
+  moves to `rust:1.98.1-alpine3.24` to match the toolchain used locally and in CI.
+- **`rmcp` 3.1.3 → 3.5.0** — the jump through 3.2.0/3.4.0 required adapting to the
+  `ServerInfo` → `ServerConfig` rename; 3.4.1 → 3.5.0 needed no source changes.
+- **Transitive dependency refresh** — `hyper-util` 0.1.21, `tokio-rustls` 0.26.6,
+  `rustls-platform-verifier` 0.7.1, `quinn-proto`/`quinn-udp`, `cc` 1.5.1,
+  `smallvec` 1.16.2, `zerocopy` 0.8.59 and the wasm-only
+  `js-sys`/`wasm-bindgen*`/`web-sys` set.
+- **Other dependency bumps** — `rustls` 0.23.43 → 0.23.45, `reqwest` 0.13.5,
+  `thiserror` 2.0.21, `clap` 4.6.7, `toml` 1.1.6, `lru` 0.18.5.
+- `matchit` stays at 0.8.4 (pinned by `axum 0.8.x`); the constraint is now documented
+  in the workspace manifest.
+
+### Removed
+
+- **`rustls-pemfile`** — unmaintained (RUSTSEC-2025-0134, repository archived in
+  August 2025). PEM parsing now uses `CertificateDer::pem_slice_iter()` from
+  `rustls-pki-types`, which `rustls 0.23` already re-exports, so no new dependency was
+  added; the orphaned `base64 0.22.1` went with it. A scan of the direct dependencies
+  against OSV reports **no advisories**.
+
+### Tests
+
+- **PEM parsing parity test** — a bundle containing a private key plus a certificate
+  must still yield exactly one certificate, locking the behaviour across the
+  `rustls-pemfile` → `rustls-pki-types` migration. Total: **185 tests** (was 184).
+
+### Documentation
+
+- Status/version references updated (v1.2.1 → v1.2.2, test count 184 → 185) in the
+  EN/RU overview, installation pages, and README; the Rust badge now reads 1.98+.
+
 ## [1.2.1] — 2026-08-19
 
 ### Fixed
@@ -201,6 +237,7 @@ All tools expose JSON Schema via `schemars` for MCP client consumption.
 
 Initial pre-release.
 
+[1.2.2]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.2.2
 [1.2.1]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.2.1
 [1.2.0]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.2.0
 [1.1.1]: https://github.com/RD2W/opengrok-mcp-server/releases/tag/v1.1.1

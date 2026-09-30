@@ -93,7 +93,7 @@ docker compose up -d
 docker pull rd2w/opengrok-mcp:latest
 
 # Или конкретной версии
-docker pull rd2w/opengrok-mcp:v1.2.1
+docker pull rd2w/opengrok-mcp:v1.2.2
 
 # Используйте docker-compose файл для готовых образов
 docker compose -f docker-compose.hub.yml up -d

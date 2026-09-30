@@ -38,51 +38,51 @@ opengrok-mcp --version
 
 ### `[opengrok.auth]` — аутентификация
 
-| Поле | По умолчанию | Описание |
-|---|---|---|
-| `mode` | `"none"` | `"token"`, `"basic"` или `"none"` |
-| `token_env` | `"OPENGROK_TOKEN"` | Имя переменной окружения для Bearer-токена (только для `mode = "token"`) |
-| `username_env` | — | Имя переменной окружения для логина Basic Auth (только для `mode = "basic"`; **должно быть задано**) |
-| `password_env` | — | Имя переменной окружения для пароля Basic Auth (только для `mode = "basic"`; пустой если не задан) |
+| Поле           | По умолчанию       | Описание                                                                                             |
+|----------------|--------------------|------------------------------------------------------------------------------------------------------|
+| `mode`         | `"none"`           | `"token"`, `"basic"` или `"none"`                                                                    |
+| `token_env`    | `"OPENGROK_TOKEN"` | Имя переменной окружения для Bearer-токена (только для `mode = "token"`)                             |
+| `username_env` | —                  | Имя переменной окружения для логина Basic Auth (только для `mode = "basic"`; **должно быть задано**) |
+| `password_env` | —                  | Имя переменной окружения для пароля Basic Auth (только для `mode = "basic"`; пустой если не задан)   |
 
 Учётные данные никогда не хранятся в файле конфигурации — только имена переменных окружения.
 
 ### `[service]` — поведение
 
-| Поле | Env var | По умолчанию | Описание |
-|---|---|---|---|
-| `strip_html` | `MCP_STRIP_HTML` | `true` | Удаление HTML-тегов `<b>` из строк поиска (`true`/`false`/`1`/`0`/`yes`/`no`) |
-| `max_hits_per_file` | `MCP_MAX_HITS_PER_FILE` | `10` | Максимум строк совпадений в одном файле |
-| `default_max_results` | `MCP_DEFAULT_MAX_RESULTS` | `25` | Лимит результатов по умолчанию, если клиент не указал |
+| Поле                  | Env var                   | По умолчанию | Описание                                                                      |
+|-----------------------|---------------------------|--------------|-------------------------------------------------------------------------------|
+| `strip_html`          | `MCP_STRIP_HTML`          | `true`       | Удаление HTML-тегов `<b>` из строк поиска (`true`/`false`/`1`/`0`/`yes`/`no`) |
+| `max_hits_per_file`   | `MCP_MAX_HITS_PER_FILE`   | `10`         | Максимум строк совпадений в одном файле                                       |
+| `default_max_results` | `MCP_DEFAULT_MAX_RESULTS` | `25`         | Лимит результатов по умолчанию, если клиент не указал                         |
 
 ### `[cache]` — кэш в памяти (только результаты поиска)
 
-| Поле | Env var | По умолчанию | Описание |
-|---|---|---|---|
-| `enabled` | `MCP_CACHE_ENABLED` | `false` | Включение/отключение кэша (`Mutex<LruCache>` с LRU-вытеснением) |
-| `ttl_secs` | `MCP_CACHE_TTL_SECS` | `300` | Время жизни записи в секундах (ленивое удаление при доступе) |
-| `max_entries` | `MCP_CACHE_MAX_ENTRIES` | `1000` | Максимум записей в кэше (LRU-вытеснение при переполнении) |
+| Поле          | Env var                 | По умолчанию | Описание                                                        |
+|---------------|-------------------------|--------------|-----------------------------------------------------------------|
+| `enabled`     | `MCP_CACHE_ENABLED`     | `false`      | Включение/отключение кэша (`Mutex<LruCache>` с LRU-вытеснением) |
+| `ttl_secs`    | `MCP_CACHE_TTL_SECS`    | `300`        | Время жизни записи в секундах (ленивое удаление при доступе)    |
+| `max_entries` | `MCP_CACHE_MAX_ENTRIES` | `1000`       | Максимум записей в кэше (LRU-вытеснение при переполнении)       |
 
 ### `[rate_limit]` — ограничение частоты (token bucket, GCRA через governor)
 
-| Поле | Env var | По умолчанию | Описание |
-|---|---|---|---|
-| `enabled` | `MCP_RATE_LIMIT_ENABLED` | `false` | Включение/отключение ограничения |
-| `requests_per_second` | `MCP_RATE_LIMIT_RPS` | `5` | Устойчивая частота запросов |
-| `burst` | `MCP_RATE_LIMIT_BURST` | `10` | Ёмкость всплеска |
+| Поле                  | Env var                  | По умолчанию | Описание                         |
+|-----------------------|--------------------------|--------------|----------------------------------|
+| `enabled`             | `MCP_RATE_LIMIT_ENABLED` | `false`      | Включение/отключение ограничения |
+| `requests_per_second` | `MCP_RATE_LIMIT_RPS`     | `5`          | Устойчивая частота запросов      |
+| `burst`               | `MCP_RATE_LIMIT_BURST`   | `10`         | Ёмкость всплеска                 |
 
 ### `[transport]` — режим сервера
 
-| Поле | Env var | По умолчанию | Описание |
-|---|---|---|---|
-| `mode` | `MCP_TRANSPORT` | `"both"` | `"stdio"`, `"http"` или `"both"` |
-| `bind_addr` | `MCP_BIND_ADDR` | `"127.0.0.1:8080"` | Адрес для HTTP |
-| `http_path` | `MCP_HTTP_PATH` | `"/mcp"` | Путь эндпоинта MCP |
-| `health_path` | `MCP_HEALTH_PATH` | `"/healthz"` | Эндпоинт живучести |
-| `ready_path` | `MCP_READY_PATH` | `"/readyz"` | Эндпоинт готовности |
-| `metrics_path` | `MCP_METRICS_PATH` | `"/metrics"` | Эндпоинт метрик Prometheus |
-| `allowed_hosts` | `MCP_ALLOWED_HOSTS` | `[]` | Разрешённые значения заголовка Host (через запятую в env; защита от DNS rebinding) |
-| `mcp_auth_token` | `MCP_AUTH_TOKEN` | `""` | Bearer-токен для аутентификации MCP-эндпоинта (пустая строка = отключено). Можно задать в TOML или через env. |
+| Поле             | Env var             | По умолчанию       | Описание                                                                                                      |
+|------------------|---------------------|--------------------|---------------------------------------------------------------------------------------------------------------|
+| `mode`           | `MCP_TRANSPORT`     | `"both"`           | `"stdio"`, `"http"` или `"both"`                                                                              |
+| `bind_addr`      | `MCP_BIND_ADDR`     | `"127.0.0.1:8080"` | Адрес для HTTP                                                                                                |
+| `http_path`      | `MCP_HTTP_PATH`     | `"/mcp"`           | Путь эндпоинта MCP                                                                                            |
+| `health_path`    | `MCP_HEALTH_PATH`   | `"/healthz"`       | Эндпоинт живучести                                                                                            |
+| `ready_path`     | `MCP_READY_PATH`    | `"/readyz"`        | Эндпоинт готовности                                                                                           |
+| `metrics_path`   | `MCP_METRICS_PATH`  | `"/metrics"`       | Эндпоинт метрик Prometheus                                                                                    |
+| `allowed_hosts`  | `MCP_ALLOWED_HOSTS` | `[]`               | Разрешённые значения заголовка Host (через запятую в env; защита от DNS rebinding)                            |
+| `mcp_auth_token` | `MCP_AUTH_TOKEN`    | `""`               | Bearer-токен для аутентификации MCP-эндпоинта (пустая строка = отключено). Можно задать в TOML или через env. |
 
 #### Аутентификация MCP-сервера (входящие запросы)
 
@@ -109,9 +109,9 @@ mcp_auth_token = "shared-secret-12345"
 
 ### `[log]`
 
-| Поле | Env var | По умолчанию | Описание |
-|---|---|---|---|
-| `level` | `MCP_LOG_LEVEL`, `RUST_LOG` | `"info"` | `trace`, `debug`, `info`, `warn`, `error` (`RUST_LOG` применяется последним) |
+| Поле    | Env var                     | По умолчанию | Описание                                                                     |
+|---------|-----------------------------|--------------|------------------------------------------------------------------------------|
+| `level` | `MCP_LOG_LEVEL`, `RUST_LOG` | `"info"`     | `trace`, `debug`, `info`, `warn`, `error` (`RUST_LOG` применяется последним) |
 
 ---
 
@@ -180,11 +180,11 @@ allowed_hosts = ["localhost", "mcp.example.com"]
 
 ## Health-эндпоинты
 
-| Эндпоинт | Поведение |
-|---|---|
-| `GET /healthz` | Всегда `200 OK`, если процесс жив |
-| `GET /readyz` | `200`, когда конфигурация загружена и OpenGrok отвечает на лёгкий пробный запрос; иначе `503` |
-| `GET /metrics` | Текстовый формат Prometheus — счётчики запросов, задержки, попадания/промахи кэша |
+| Эндпоинт       | Поведение                                                                                     |
+|----------------|-----------------------------------------------------------------------------------------------|
+| `GET /healthz` | Всегда `200 OK`, если процесс жив                                                             |
+| `GET /readyz`  | `200`, когда конфигурация загружена и OpenGrok отвечает на лёгкий пробный запрос; иначе `503` |
+| `GET /metrics` | Текстовый формат Prometheus — счётчики запросов, задержки, попадания/промахи кэша             |
 
 ### Проверка здоровья в Docker
 
@@ -203,48 +203,48 @@ healthcheck:
 
 ### Инструменты поиска
 
-| Инструмент | Описание | Основные параметры |
-|---|---|---|
-| `search_code` | Полнотекстовый поиск (Lucene-синтаксис) | `query`, `project?`, `max_results` |
-| `search_definition` | Поиск определения символа | `symbol`, `project?`, `max_results` |
-| `search_references` | Поиск всех использований символа | `symbol`, `project?`, `max_results` |
-| `search_file_path` | Поиск файлов по пути (glob) | `path`, `project?`, `max_results` |
-| `search_history` | Поиск по истории изменений | `hist`, `project?`, `max_results` |
-| `advanced_search` | Расширенный поиск (все поля, пагинация, сортировка) | `full?`, `def?`, `symbol?`, `path?`, `hist?`, `file_type?`, `project?`, `max_results?`, `start?`, `max_hits_per_file?`, `sort?` |
-| `suggest` | Автодополнение поискового запроса | `project`, `field`, `caret`, `full?`, `defs?`, `refs?`, `path?`, `file_type?` |
+| Инструмент          | Описание                                            | Основные параметры                                                                                                              |
+|---------------------|-----------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| `search_code`       | Полнотекстовый поиск (Lucene-синтаксис)             | `query`, `project?`, `max_results`                                                                                              |
+| `search_definition` | Поиск определения символа                           | `symbol`, `project?`, `max_results`                                                                                             |
+| `search_references` | Поиск всех использований символа                    | `symbol`, `project?`, `max_results`                                                                                             |
+| `search_file_path`  | Поиск файлов по пути (glob)                         | `path`, `project?`, `max_results`                                                                                               |
+| `search_history`    | Поиск по истории изменений                          | `hist`, `project?`, `max_results`                                                                                               |
+| `advanced_search`   | Расширенный поиск (все поля, пагинация, сортировка) | `full?`, `def?`, `symbol?`, `path?`, `hist?`, `file_type?`, `project?`, `max_results?`, `start?`, `max_hits_per_file?`, `sort?` |
+| `suggest`           | Автодополнение поискового запроса                   | `project`, `field`, `caret`, `full?`, `defs?`, `refs?`, `path?`, `file_type?`                                                   |
 
 ### Инструменты для файлов
 
-| Инструмент | Описание | Основные параметры |
-|---|---|---|
-| `get_file_content` | Получение содержимого файла | `project`, `path` |
-| `get_file_definitions` | Определения (функции, классы) в файле | `path` |
-| `get_file_genre` | Тип файла (PLAIN, XREFABLE, IMAGE, DATA, HTML) | `path` |
-| `get_history` | История изменений файла | `path`, `start?`, `max?`, `with_files?` |
-| `get_annotation` | Аннотация (blame) для файла | `path` |
+| Инструмент             | Описание                                       | Основные параметры                      |
+|------------------------|------------------------------------------------|-----------------------------------------|
+| `get_file_content`     | Получение содержимого файла                    | `project`, `path`                       |
+| `get_file_definitions` | Определения (функции, классы) в файле          | `path`                                  |
+| `get_file_genre`       | Тип файла (PLAIN, XREFABLE, IMAGE, DATA, HTML) | `path`                                  |
+| `get_history`          | История изменений файла                        | `path`, `start?`, `max?`, `with_files?` |
+| `get_annotation`       | Аннотация (blame) для файла                    | `path`                                  |
 
 ### Инструменты для директорий и проектов
 
-| Инструмент | Описание | Основные параметры |
-|---|---|---|
-| `list_directory` | Список содержимого директории | `path` |
-| `list_indexed_projects` | Список индексированных проектов | — |
-| `list_all_projects` | Список всех проектов (включая неиндексированные) | — |
-| `list_groups` | Список групп проектов | — |
-| `get_group_projects` | Проекты внутри группы (включая подгруппы) | `group` |
-| `list_project_files` | Список файлов проекта из индекса | `project`, `path?` (по умолчанию: `"/"`) |
-| `list_project_repos` | Пути репозиториев проекта | `project` |
-| `get_project_property` | Per-project свойство | `project`, `name` |
-| `get_repo_property` | Свойство репозитория (тип, ветка, remote, ...) | `field`, `repository` |
+| Инструмент              | Описание                                         | Основные параметры                       |
+|-------------------------|--------------------------------------------------|------------------------------------------|
+| `list_directory`        | Список содержимого директории                    | `path`                                   |
+| `list_indexed_projects` | Список индексированных проектов                  | —                                        |
+| `list_all_projects`     | Список всех проектов (включая неиндексированные) | —                                        |
+| `list_groups`           | Список групп проектов                            | —                                        |
+| `get_group_projects`    | Проекты внутри группы (включая подгруппы)        | `group`                                  |
+| `list_project_files`    | Список файлов проекта из индекса                 | `project`, `path?` (по умолчанию: `"/"`) |
+| `list_project_repos`    | Пути репозиториев проекта                        | `project`                                |
+| `get_project_property`  | Per-project свойство                             | `project`, `name`                        |
+| `get_repo_property`     | Свойство репозитория (тип, ветка, remote, ...)   | `field`, `repository`                    |
 
 ### Системные инструменты
 
-| Инструмент | Описание | Основные параметры |
-|---|---|---|
-| `get_suggest_config` | Конфигурация suggester'а | — |
-| `get_index_time` | Время последней индексации (ISO 8601) | — |
-| `get_opengrok_version` | Версия OpenGrok | — |
-| `health_check` | Проверка живости OpenGrok | — |
+| Инструмент             | Описание                              | Основные параметры |
+|------------------------|---------------------------------------|--------------------|
+| `get_suggest_config`   | Конфигурация suggester'а              | —                  |
+| `get_index_time`       | Время последней индексации (ISO 8601) | —                  |
+| `get_opengrok_version` | Версия OpenGrok                       | —                  |
+| `health_check`         | Проверка живости OpenGrok             | —                  |
 
 ### Формат результатов
 

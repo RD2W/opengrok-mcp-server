@@ -84,28 +84,28 @@ MCP** — это чистая HTTP-клиентская библиотека, к
 
 ### `opengrok-core` — домен и инфраструктура
 
-| Модуль | Назначение |
-|---|---|
-| `domain.rs` | Все типы данных: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, типы ошибок (`DomainError`) |
-| `application.rs` | Высокоуровневые операции: `search()`, `get_file_content()`, `get_history()`, с пагинацией, кэшированием и форматированием |
-| `infrastructure/client.rs` | HTTP-клиент на `reqwest`: формирование запросов, добавление заголовков аутентификации, разбор ответов, обработка особенностей OpenGrok |
-| `infrastructure/tls.rs` | TLS-конфигурация: загрузка пользовательских CA, настройка rustls, разбор PEM |
-| `infrastructure/format.rs` | Очистка HTML-тегов (`<b>`, `<i>` и др.), форматирование всех типов ответов |
-| `infrastructure/cache.rs` | Кэш в памяти с TTL-вытеснением на основе `Mutex<LruCache>` |
-| `infrastructure/rate_limit.rs` | Ограничитель частоты token bucket через `governor` |
+| Модуль                         | Назначение                                                                                                                             |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| `domain.rs`                    | Все типы данных: `SearchResult`, `FileContent`, `HistoryEntry`, `Project`, `DirectoryEntry`, типы ошибок (`DomainError`)               |
+| `application.rs`               | Высокоуровневые операции: `search()`, `get_file_content()`, `get_history()`, с пагинацией, кэшированием и форматированием              |
+| `infrastructure/client.rs`     | HTTP-клиент на `reqwest`: формирование запросов, добавление заголовков аутентификации, разбор ответов, обработка особенностей OpenGrok |
+| `infrastructure/tls.rs`        | TLS-конфигурация: загрузка пользовательских CA, настройка rustls, разбор PEM                                                           |
+| `infrastructure/format.rs`     | Очистка HTML-тегов (`<b>`, `<i>` и др.), форматирование всех типов ответов                                                             |
+| `infrastructure/cache.rs`      | Кэш в памяти с TTL-вытеснением на основе `Mutex<LruCache>`                                                                             |
+| `infrastructure/rate_limit.rs` | Ограничитель частоты token bucket через `governor`                                                                                     |
 
 ### `opengrok-mcp` — MCP-сервер
 
-| Модуль | Назначение |
-|---|---|
-| `mcp/mod.rs` | Инициализация MCP-сервера, диспетчеризация обработчиков 25 инструментов |
-| `mcp/tools.rs` | Типы параметров 25 инструментов с JSON Schema (schemars): имена, описания, значения по умолчанию |
-| `mcp/tools_impl/` | Реализации обработчиков, сгруппированные по категориям (search, content, history, metadata, system) |
-| `config.rs` | Загрузка конфигурации: разбор TOML, переопределение через env, валидация |
-| `transport/http.rs` | Маршрутизатор Axum с `NeverSessionManager` (stateless, протокол MCP 2026-07-28): MCP-эндпоинт, health, readiness, metrics, middleware аутентификации по MCP-токену |
-| `transport/stdio.rs` | Транспорт stdin/stdout через rmcp |
-| `health.rs` | Обработчики health check: живучесть, готовность с пробным запросом к OpenGrok, сбор метрик Prometheus |
-| `main.rs` | Точка входа: разбор CLI, инициализация конфигурации, выбор транспорта, обработка сигналов завершения |
+| Модуль               | Назначение                                                                                                                                                         |
+|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `mcp/mod.rs`         | Инициализация MCP-сервера, диспетчеризация обработчиков 25 инструментов                                                                                            |
+| `mcp/tools.rs`       | Типы параметров 25 инструментов с JSON Schema (schemars): имена, описания, значения по умолчанию                                                                   |
+| `mcp/tools_impl/`    | Реализации обработчиков, сгруппированные по категориям (search, content, history, metadata, system)                                                                |
+| `config.rs`          | Загрузка конфигурации: разбор TOML, переопределение через env, валидация                                                                                           |
+| `transport/http.rs`  | Маршрутизатор Axum с `NeverSessionManager` (stateless, протокол MCP 2026-07-28): MCP-эндпоинт, health, readiness, metrics, middleware аутентификации по MCP-токену |
+| `transport/stdio.rs` | Транспорт stdin/stdout через rmcp                                                                                                                                  |
+| `health.rs`          | Обработчики health check: живучесть, готовность с пробным запросом к OpenGrok, сбор метрик Prometheus                                                              |
+| `main.rs`            | Точка входа: разбор CLI, инициализация конфигурации, выбор транспорта, обработка сигналов завершения                                                               |
 
 ---
 

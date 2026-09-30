@@ -31,12 +31,12 @@ handling, rate limiting, and result formatting.
 
 ### 25 MCP tools — full OpenGrok REST API coverage
 
-| Category | Tools |
-|---|---|
-| Search (7) | `search_code`, `search_definition`, `search_references`, `search_file_path`, `search_history`, `advanced_search`, `suggest` |
-| Files (5) | `get_file_content`, `get_file_definitions`, `get_file_genre`, `get_history`, `get_annotation` |
+| Category       | Tools                                                                                                                                                                   |
+|----------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Search (7)     | `search_code`, `search_definition`, `search_references`, `search_file_path`, `search_history`, `advanced_search`, `suggest`                                             |
+| Files (5)      | `get_file_content`, `get_file_definitions`, `get_file_genre`, `get_history`, `get_annotation`                                                                           |
 | Navigation (8) | `list_directory`, `list_indexed_projects`, `list_all_projects`, `list_groups`, `get_group_projects`, `list_project_files`, `list_project_repos`, `get_project_property` |
-| System (5) | `get_repo_property`, `get_suggest_config`, `get_index_time`, `get_opengrok_version`, `health_check` |
+| System (5)     | `get_repo_property`, `get_suggest_config`, `get_index_time`, `get_opengrok_version`, `health_check`                                                                     |
 
 Each tool declares its parameters via JSON Schema (schemars), so LLM clients
 automatically know the expected inputs and outputs — no manual prompt engineering
@@ -44,20 +44,20 @@ needed.
 
 ### Dual transport
 
-| Mode | Use case |
-|---|---|
-| **stdio** | Direct process launch: `docker exec`, Claude Desktop local subprocess, debugging |
-| **Streamable HTTP** | Network deployment: remote server, multiple clients, health checks, metrics |
+| Mode                | Use case                                                                         |
+|---------------------|----------------------------------------------------------------------------------|
+| **stdio**           | Direct process launch: `docker exec`, Claude Desktop local subprocess, debugging |
+| **Streamable HTTP** | Network deployment: remote server, multiple clients, health checks, metrics      |
 
 The `both` mode runs stdio and HTTP simultaneously (default).
 
 ### Flexible authentication
 
-| Mode | Description |
-|---|---|
-| `token` | Bearer token from an environment variable |
+| Mode    | Description                                       |
+|---------|---------------------------------------------------|
+| `token` | Bearer token from an environment variable         |
 | `basic` | HTTP Basic Auth (username/password from env vars) |
-| `none` | No authentication header — for open instances |
+| `none`  | No authentication header — for open instances     |
 
 Credentials are **never** stored in the config file — only environment variable names.
 
@@ -82,20 +82,20 @@ This prevents DNS rebinding attacks when the server is exposed on a network.
 
 ### Optimised for AOSP-scale codebases
 
-| Feature | Purpose |
-|---|---|
-| **HTML tag stripping** | Removes `<b>` tags from search results — cleaner output for LLMs |
-| **Result capping** | `max_hits_per_file` limits matching lines per file |
-| **In-memory cache** | TTL-based LRU cache with configurable size, avoids repeated API calls |
-| **Rate limiting** | Token-bucket limiter (GCRA via `governor`) protects the OpenGrok backend from overload |
-| **Result formatting** | Consistent text output with counts, line numbers, and durations |
+| Feature                | Purpose                                                                                |
+|------------------------|----------------------------------------------------------------------------------------|
+| **HTML tag stripping** | Removes `<b>` tags from search results — cleaner output for LLMs                       |
+| **Result capping**     | `max_hits_per_file` limits matching lines per file                                     |
+| **In-memory cache**    | TTL-based LRU cache with configurable size, avoids repeated API calls                  |
+| **Rate limiting**      | Token-bucket limiter (GCRA via `governor`) protects the OpenGrok backend from overload |
+| **Result formatting**  | Consistent text output with counts, line numbers, and durations                        |
 
 ### Health & metrics
 
-| Endpoint | Purpose |
-|---|---|
-| `/healthz` | Liveness — always returns 200 if the server is running |
-| `/readyz` | Readiness — 200 when config is loaded and OpenGrok is reachable |
+| Endpoint   | Purpose                                                            |
+|------------|--------------------------------------------------------------------|
+| `/healthz` | Liveness — always returns 200 if the server is running             |
+| `/readyz`  | Readiness — 200 when config is loaded and OpenGrok is reachable    |
 | `/metrics` | Prometheus-format metrics (request counts, latencies, cache stats) |
 
 ### Docker
@@ -107,7 +107,7 @@ for local development and remote deployment.
 
 ## Current status
 
-**v1.2.1.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
+**v1.2.2.** The core HTTP client, all 25 MCP tools, dual transport, caching, rate
 limiting, TLS, MCP server-side token auth, health endpoints, and Docker packaging
-are implemented and covered by **184 tests**. Supports MCP 2026-07-28 protocol
+are implemented and covered by **185 tests**. Supports MCP 2026-07-28 protocol
 (stateless Streamable HTTP, protocol negotiation) with legacy 2025-11-25 fallback.
