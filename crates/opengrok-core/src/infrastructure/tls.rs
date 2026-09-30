@@ -13,12 +13,13 @@
 //! 3. Custom CA directory from `SSL_CERT_DIR`
 //! 4. If `verify_ssl = false`: dangerous no-verification connector
 
+use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use std::{fs, io};
 
 use rustls::ClientConfig;
 use rustls::pki_types::CertificateDer;
+use rustls::pki_types::pem::PemObject;
 
 use crate::domain::DomainError;
 
@@ -216,17 +217,13 @@ fn build_no_verify_connector() -> Result<ClientConfig, DomainError> {
 }
 
 /// Parse PEM-encoded certificates from raw bytes.
+///
+/// Non-certificate sections (for example a private key shipped in the same
+/// bundle) are skipped; only malformed PEM is an error.
 fn parse_certs_from_pem(bytes: &[u8]) -> Result<Vec<CertificateDer<'static>>, DomainError> {
-    let mut cursor = io::Cursor::new(bytes);
-    let mut certs = Vec::new();
-
-    for result in rustls_pemfile::certs(&mut cursor) {
-        let cert = result
-            .map_err(|e| DomainError::Tls(format!("failed to parse PEM certificate: {e}")))?;
-        certs.push(cert);
-    }
-
-    Ok(certs)
+    CertificateDer::pem_slice_iter(bytes)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| DomainError::Tls(format!("failed to parse PEM certificate: {e}")))
 }
 
 /// Add certificates to the root store, returning the number successfully added.
@@ -472,5 +469,23 @@ ygtwQ8YCIQDqH4ieElAqCu1kA/AYhcV6XA1rSCU0vvIommVf+zcjxQ==
         if let Ok(certs) = result {
             assert!(certs.is_empty());
         } // Err(_) is acceptable
+    }
+
+    /// Behavior lock kept across the `rustls-pemfile` -> `rustls-pki-types`
+    /// migration: sections that are not certificates (a private key shipped in
+    /// the same bundle) are skipped, not reported as an error.
+    #[test]
+    fn parse_certs_from_pem_skips_non_certificate_sections() {
+        let bundle = format!(
+            "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASC\n-----END PRIVATE KEY-----\n{DUMMY_CERT_PEM}"
+        );
+
+        let certs = parse_certs_from_pem(bundle.as_bytes()).expect("bundle should parse");
+
+        assert_eq!(
+            certs.len(),
+            1,
+            "only the certificate section should be returned"
+        );
     }
 }
