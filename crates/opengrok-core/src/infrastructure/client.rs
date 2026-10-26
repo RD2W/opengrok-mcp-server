@@ -698,6 +698,7 @@ mod tests {
 
         tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
+            let (_first, _headers) = read_request(&mut stream).await;
             let resp = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 21\r\n\r\ninternal server error";
             stream.write_all(resp.as_bytes()).await.unwrap();
             stream.shutdown().await.unwrap();
@@ -834,6 +835,7 @@ mod tests {
 
         tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
+            let (_first, _headers) = read_request(&mut stream).await;
             let resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 9\r\n\r\nnot found";
             stream.write_all(resp.as_bytes()).await.unwrap();
             stream.shutdown().await.unwrap();
@@ -1252,6 +1254,7 @@ mod tests {
 
         tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
+            let (_first, _headers) = read_request(&mut stream).await;
             let resp = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n";
             stream.write_all(resp.as_bytes()).await.unwrap();
             stream.shutdown().await.unwrap();
